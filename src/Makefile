@@ -1,10 +1,10 @@
 DEVICE      = MSP430F5529
-CC          = msp430-elf-gcc
-OBJCOPY     = msp430-elf-objcopy
-AR          = msp430-elf-ar
+CC          = msp430-gcc
+OBJCOPY     = msp430-objcopy
+AR          = msp430-ar
 OS 			= $(shell uname -o)
 ######################################
-INCDIR      = ../../../../driverlib/MSP430F5xx_6xx
+INCDIR      = ../../driverlib_1_90_00_65/driverlib/MSP430F5xx_6xx
 ######################################
 ifeq ($(OS),Cygwin)
 GCCINCDIR   = $(shell cygpath -m $(dir $(shell which $(CC)))../../../../ccs_base/msp430/include_gcc)
@@ -13,15 +13,15 @@ LDDIR       = $(GCCINCDIR)/$(shell echo $(DEVICE) | tr A-Z a-z)
 CFLAGS      = -O2 -D__$(DEVICE)__ -mmcu=$(DEVICE) -ffunction-sections -fdata-sections
 LDFLAGS     = -T $(LDDIR).ld -mmcu=$(DEVICE) -Wl,--gc-sections
 ######################################
-EXECUTABLE  = adc12_a_ex5_repeatedSingle
-EXSRCDIR    = ..
+EXECUTABLE  = main
+EXSRCDIR    = .
 SRCDIR      = $(INCDIR)
 OBJDIR      = objs
 EXOBJECT    = $(OBJDIR)/$(EXECUTABLE).o
 SOURCES     = $(wildcard $(SRCDIR)/*.c)
 OBJECTS     = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(SOURCES)))
 ######################################
-INCLUDES    = -I$(GCCINCDIR) -I$(INCDIR)
+INCLUDES    = -I. -I$(INCDIR)
 ######################################
 
 all: init $(EXECUTABLE)
