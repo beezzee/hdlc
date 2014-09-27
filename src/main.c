@@ -87,9 +87,9 @@ volatile uint16_t temperature_buffer[temperature_buffer_size];
 
 
 void motor_stop(void) {
-       //Set all P1 pins HI
-        GPIO_setOutputHighOnPin(
-			    motor_port,motor_down_pin+motor_up_pin             );
+  //Set all P1 pins HI
+  GPIO_setOutputHighOnPin(
+			  motor_port,motor_down_pin+motor_up_pin             );
 }
 
 void motor_down(void) {
@@ -104,112 +104,112 @@ void motor_up(void) {
 
 void ports_init(void) {
 			    
-			    motor_stop();
-        //Set P1.x to output direction
-        GPIO_setAsOutputPin(
-			    motor_port,motor_down_pin+motor_up_pin
-                );
+  motor_stop();
+  //Set P1.x to output direction
+  GPIO_setAsOutputPin(
+		      motor_port,motor_down_pin+motor_up_pin
+		      );
 
 	
 }
 
 void adc_init(void) {
 
-        //Enable A/D channel A0
-        GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P6,
-                                                   GPIO_PIN0
-                                                   );
+  //Enable A/D channel A0
+  GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P6,
+					     GPIO_PIN0
+					     );
 
-        //Initialize the ADC12_A Module
-        /*
-         * Base address of ADC12_A Module
-         * Use internal ADC12_A bit as sample/hold signal to start conversion
-         * USE MODOSC 5MHZ Digital Oscillator as clock source
-         * Use default clock divider of 1
-         */
-        ADC12_A_init(ADC12_A_BASE,
-                     ADC12_A_SAMPLEHOLDSOURCE_SC,
-                     ADC12_A_CLOCKSOURCE_ADC12OSC,
-                     ADC12_A_CLOCKDIVIDER_1);
+  //Initialize the ADC12_A Module
+  /*
+   * Base address of ADC12_A Module
+   * Use internal ADC12_A bit as sample/hold signal to start conversion
+   * USE MODOSC 5MHZ Digital Oscillator as clock source
+   * Use default clock divider of 1
+   */
+  ADC12_A_init(ADC12_A_BASE,
+	       ADC12_A_SAMPLEHOLDSOURCE_SC,
+	       ADC12_A_CLOCKSOURCE_ADC12OSC,
+	       ADC12_A_CLOCKDIVIDER_1);
 
-        ADC12_A_enable(ADC12_A_BASE);
+  ADC12_A_enable(ADC12_A_BASE);
 
-        /*
-         * Base address of ADC12_A Module
-         * For memory buffers 0-7 sample/hold for 256 clock cycles
-         * For memory buffers 8-15 sample/hold for 4 clock cycles (default)
-         * Enable Multiple Sampling
-         */
-        ADC12_A_setupSamplingTimer(ADC12_A_BASE,
-                                   ADC12_A_CYCLEHOLD_256_CYCLES,
-                                   ADC12_A_CYCLEHOLD_4_CYCLES,
-                                   ADC12_A_MULTIPLESAMPLESENABLE);
+  /*
+   * Base address of ADC12_A Module
+   * For memory buffers 0-7 sample/hold for 256 clock cycles
+   * For memory buffers 8-15 sample/hold for 4 clock cycles (default)
+   * Enable Multiple Sampling
+   */
+  ADC12_A_setupSamplingTimer(ADC12_A_BASE,
+			     ADC12_A_CYCLEHOLD_256_CYCLES,
+			     ADC12_A_CYCLEHOLD_4_CYCLES,
+			     ADC12_A_MULTIPLESAMPLESENABLE);
 
-        //Configure Memory Buffer
-        /*
-         * Base address of the ADC12_A Module
-         * Configure memory buffer 0
-         * Map input A0 to memory buffer 0
-         * Vref+ = AVcc
-         * Vref- = AVss
-         * Memory buffer 0 is not the end of a sequence
-         */
-        ADC12_A_memoryConfigure(ADC12_A_BASE,
-                                ADC12_A_MEMORY_0,
-                                ADC12_A_INPUT_A0,
-                                ADC12_A_VREFPOS_AVCC,
-                                ADC12_A_VREFNEG_AVSS,
-                                ADC12_A_NOTENDOFSEQUENCE);
+  //Configure Memory Buffer
+  /*
+   * Base address of the ADC12_A Module
+   * Configure memory buffer 0
+   * Map input A0 to memory buffer 0
+   * Vref+ = AVcc
+   * Vref- = AVss
+   * Memory buffer 0 is not the end of a sequence
+   */
+  ADC12_A_memoryConfigure(ADC12_A_BASE,
+			  ADC12_A_MEMORY_0,
+			  ADC12_A_INPUT_A0,
+			  ADC12_A_VREFPOS_AVCC,
+			  ADC12_A_VREFNEG_AVSS,
+			  ADC12_A_NOTENDOFSEQUENCE);
 
-        //Enable memory buffer 0 interrupt
-        ADC12_A_clearInterrupt(ADC12_A_BASE,
-                               ADC12IFG0);
-        ADC12_A_enableInterrupt(ADC12_A_BASE,
-                                ADC12IE0);
+  //Enable memory buffer 0 interrupt
+  ADC12_A_clearInterrupt(ADC12_A_BASE,
+			 ADC12IFG0);
+  ADC12_A_enableInterrupt(ADC12_A_BASE,
+			  ADC12IE0);
 
-        //Enable/Start first sampling and conversion cycle
-        /*
-         * Base address of ADC12_A Module
-         * Start the conversion into memory buffer 0
-         * Use the repeated single-channel
-         */
-        ADC12_A_startConversion(ADC12_A_BASE,
-                                ADC12_A_MEMORY_0,
-                                ADC12_A_REPEATED_SINGLECHANNEL);
+  //Enable/Start first sampling and conversion cycle
+  /*
+   * Base address of ADC12_A Module
+   * Start the conversion into memory buffer 0
+   * Use the repeated single-channel
+   */
+  ADC12_A_startConversion(ADC12_A_BASE,
+			  ADC12_A_MEMORY_0,
+			  ADC12_A_REPEATED_SINGLECHANNEL);
 
 }
 
 void usart_init(void) {
-        //P3.4,5 = USCI_A0 TXD/RXD
-        GPIO_setAsPeripheralModuleFunctionInputPin(
-						   usart_port
-						   usart_rx_pin + usart_tx_pin
-                );
+  //P3.4,5 = USCI_A0 TXD/RXD
+  GPIO_setAsPeripheralModuleFunctionInputPin(
+					     usart_port
+					     usart_rx_pin + usart_tx_pin
+					     );
 
-        //Baudrate = 9600, clock freq = 1.048MHz
-        //UCBRx = 109, UCBRFx = 0, UCBRSx = 2, UCOS16 = 0
-        if ( STATUS_FAIL == USCI_A_UART_initAdvance(USCI_A0_BASE,
-                                                    USCI_A_UART_CLOCKSOURCE_SMCLK,
-                                                    109,
-                                                    0,
-                                                    2,
-                                                    USCI_A_UART_NO_PARITY,
-                                                    USCI_A_UART_LSB_FIRST,
-                                                    USCI_A_UART_ONE_STOP_BIT,
-                                                    USCI_A_UART_MODE,
-                                                    USCI_A_UART_LOW_FREQUENCY_BAUDRATE_GENERATION ))
-                return;
+  //Baudrate = 9600, clock freq = 1.048MHz
+  //UCBRx = 109, UCBRFx = 0, UCBRSx = 2, UCOS16 = 0
+  if ( STATUS_FAIL == USCI_A_UART_initAdvance(USCI_A0_BASE,
+					      USCI_A_UART_CLOCKSOURCE_SMCLK,
+					      109,
+					      0,
+					      2,
+					      USCI_A_UART_NO_PARITY,
+					      USCI_A_UART_LSB_FIRST,
+					      USCI_A_UART_ONE_STOP_BIT,
+					      USCI_A_UART_MODE,
+					      USCI_A_UART_LOW_FREQUENCY_BAUDRATE_GENERATION ))
+    return;
 
-        //Enable UART module for operation
-        USCI_A_UART_enable(USCI_A0_BASE);
+  //Enable UART module for operation
+  USCI_A_UART_enable(USCI_A0_BASE);
 
-        //Enable Receive Interrupt
-        USCI_A_UART_clearInterruptFlag(USCI_A0_BASE,
-                                       USCI_A_UART_RECEIVE_INTERRUPT);
-        USCI_A_UART_enableInterrupt(USCI_A0_BASE,
-                                    USCI_A_UART_RECEIVE_INTERRUPT);
+  //Enable Receive Interrupt
+  USCI_A_UART_clearInterruptFlag(USCI_A0_BASE,
+				 USCI_A_UART_RECEIVE_INTERRUPT);
+  USCI_A_UART_enableInterrupt(USCI_A0_BASE,
+			      USCI_A_UART_RECEIVE_INTERRUPT);
 
-        __enable_interrupt();
+  __enable_interrupt();
 
 
 }
@@ -224,131 +224,131 @@ void usart_printf(const char *format, ...) {
 
   USCI_A_UART_clearInterruptFlag(USCI_A0_BASE,   
 
-  /*pass arguments through to the system printf*/
-  va_start (arg, format);
-  done = vprintf (format, arg);
-  va_end (arg);
+				 /*pass arguments through to the system printf*/
+				 va_start (arg, format);
+				 done = vprintf (format, arg);
+				 va_end (arg);
 
 				 fflush(stdout);
 				 
 				 while(USCI_A_UART_queryStatusFlags 	(USCI_A0_BASE,USCI_A_UART_BUSY ));
 				 
-}
+				 }
 
-/**
-   Function that writes one character to the selected USART.
+    /**
+       Function that writes one character to the selected USART.
 
-   The special character \\n is forwarded as \\r to \a stream.
-*/
-int usart_putchar(char c, FILE *s) {
-  // Load data onto buffer
-
-
-  USCI_A_UART_transmitData(USCI_A0_BASE,
-			   c);
-
-  while(!USCI_A_UART_getInterruptStatus(USCI_A0_BASE, USCI_A_UART_TRANSMIT_INTERRUPT_FLAG ); 
-
-  return 0;
-}
+       The special character \\n is forwarded as \\r to \a stream.
+    */
+    int usart_putchar(char c, FILE *s) {
+    // Load data onto buffer
 
 
-static FILE usart_out = FDEV_SETUP_STREAM( usart_putchar, NULL, _FDEV_SETUP_WRITE );
+    USCI_A_UART_transmitData(USCI_A0_BASE,
+			     c);
 
-void rtc_init(void) {
+    while(!USCI_A_UART_getInterruptStatus(USCI_A0_BASE, USCI_A_UART_TRANSMIT_INTERRUPT_FLAG ); 
 
-}
+	  return 0;
+	  }
 
-void timer_init(void) {
 
-}
+    static FILE usart_out = FDEV_SETUP_STREAM( usart_putchar, NULL, _FDEV_SETUP_WRITE );
 
-void lcd_init(void) {
+    void rtc_init(void) {
 
-}
+    }
 
-void temperature_update(uint16_t *tmp, uint16_t *tmp_buffer, int buffer_length) {
-  *tmp=0;
-  int i;
+    void timer_init(void) {
 
-  for(i=0;i<buffer_length;i++) {
-    *tmp+=tmp_buffer[i];
-  }
+    }
+
+    void lcd_init(void) {
+
+    }
+
+    void temperature_update(uint16_t *tmp, uint16_t *tmp_buffer, int buffer_length) {
+      *tmp=0;
+      int i;
+
+      for(i=0;i<buffer_length;i++) {
+	*tmp+=tmp_buffer[i];
+      }
   
-}
+    }
 
 
 
-void main(void)
-{
-  int temperature;
-  stdout = &usart_out;
-        //Stop Watchdog Timer
-        WDT_A_hold(WDT_A_BASE);
+    void main(void)
+    {
+      int temperature;
+      stdout = &usart_out;
+      //Stop Watchdog Timer
+      WDT_A_hold(WDT_A_BASE);
 
-	ports_init();
+      ports_init();
 	
-	adc_init();
+      adc_init();
 
-	usart_init();
+      usart_init();
 
-	set_zero(temperature_buffer,temperature_buffer_size);
+      set_zero(temperature_buffer,temperature_buffer_size);
 
 
 
-        //Enter LPM4, Enable interrupts
-        __bis_SR_register(LPM4_bits + GIE);
+      //Enter LPM4, Enable interrupts
+      __bis_SR_register(LPM4_bits + GIE);
 
-        //For debugger
-        __no_operation();
+      //For debugger
+      __no_operation();
 
-	while(1) {
-	  temperature_update(&temperature,temperature_buffer,temperature_buffer_size);
-	}
+      while(1) {
+	temperature_update(&temperature,temperature_buffer,temperature_buffer_size);
+      }
 
-}
+    }
 
 #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
 #pragma vector=ADC12_VECTOR
-__interrupt
+    __interrupt
 #elif defined(__GNUC__)
-__attribute__((interrupt(ADC12_VECTOR)))
+      __attribute__((interrupt(ADC12_VECTOR)))
 #endif
-void ADC12ISR(void)
-{
-        static uint8_t index = 0;
+      void ADC12ISR(void)
+    {
+      static uint8_t index = 0;
 
-        switch (ADC12IV) {
-        case  ADC12IV_NONE: break;         //Vector  0:  No interrupt
-        case  ADC12IV_ADC12OVIFG: break;         //Vector  2:  ADC overflow
-        case  ADC12IV_ADC12TOVIFG: break;         //Vector  4:  ADC timing overflow
-        case  ADC12IV_ADC12IFG0:                //Vector  6:  ADC12IFG0
-                //Move results
-                temperature_buffer[index] =
-                        ADC12_A_getResults(ADC12_A_BASE,
-                                           ADC12_A_MEMORY_0);
+      switch (ADC12IV) {
+      case  ADC12IV_NONE: break;         //Vector  0:  No interrupt
+      case  ADC12IV_ADC12OVIFG: break;         //Vector  2:  ADC overflow
+      case  ADC12IV_ADC12TOVIFG: break;         //Vector  4:  ADC timing overflow
+      case  ADC12IV_ADC12IFG0:                //Vector  6:  ADC12IFG0
+	//Move results
+	temperature_buffer[index] =
+	  ADC12_A_getResults(ADC12_A_BASE,
+			     ADC12_A_MEMORY_0);
 
-                //Increment results index, modulo;
-                //Set Breakpoint1 here and watch results[]
-                index++;
+	//Increment results index, modulo;
+	//Set Breakpoint1 here and watch results[]
+	index++;
 
-                if (index == 8)
-                        index = 0;
-        case  ADC12IV_ADC12IFG1: break;         
-        case ADC12IV_ADC12IFG2: break;         
-        case ADC12IV_ADC12IFG3: break;         
-        case ADC12IV_ADC12IFG4: break;         
-        case ADC12IV_ADC12IFG5: break;         
-        case ADC12IV_ADC12IFG6: break;         
-        case ADC12IV_ADC12IFG7: break;         
-        case ADC12IV_ADC12IFG8: break;         
-        case ADC12IV_ADC12IFG9: break;         
-        case ADC12IV_ADC12IFG10: break;         
-        case ADC12IV_ADC12IFG11: break;         
-        case ADC12IV_ADC12IFG12: break;         
-        case ADC12IV_ADC12IFG13: break;         
-        case ADC12IV_ADC12IFG14: break;         
-        case ADC12IV_ADC12IFG15: break;         
-        default: break;
-        }
-}
+	if (index == 8)
+	  index = 0;
+      case  ADC12IV_ADC12IFG1: break;         
+      case ADC12IV_ADC12IFG2: break;         
+      case ADC12IV_ADC12IFG3: break;         
+      case ADC12IV_ADC12IFG4: break;         
+      case ADC12IV_ADC12IFG5: break;         
+      case ADC12IV_ADC12IFG6: break;         
+      case ADC12IV_ADC12IFG7: break;         
+      case ADC12IV_ADC12IFG8: break;         
+      case ADC12IV_ADC12IFG9: break;         
+      case ADC12IV_ADC12IFG10: break;         
+      case ADC12IV_ADC12IFG11: break;         
+      case ADC12IV_ADC12IFG12: break;         
+      case ADC12IV_ADC12IFG13: break;         
+      case ADC12IV_ADC12IFG14: break;         
+      case ADC12IV_ADC12IFG15: break;         
+      default: break;
+      }
+    }
