@@ -66,18 +66,47 @@
 
 #include "driverlib.h"
 
-#define   Num_of_Results   8
+#define motor_down_pin GPIO_PIN0
+#define motor_up_pin GPIO_PIN1
+#define motor_port GPIO_PORT_P1
 
-volatile uint16_t results[Num_of_Results];
+#define   temperature_buffer_size   8
+
+volatile uint16_t temperature_buffer[temperature_buffer_size];
 //Needs to be global in this
 //example. Otherwise, the
 //compiler removes it because it
 //is not used for anything.
 
-void main(void)
-{
-        //Stop Watchdog Timer
-        WDT_A_hold(WDT_A_BASE);
+
+void motor_stop(void) {
+       //Set all P1 pins HI
+        GPIO_setOutputHighOnPin(
+			    motor_port,motor_down_pin+motor_up_pin             );
+}
+
+void motor_down(void) {
+  motor_stop();
+  GPIO_setOutputLowOnPin(motor_port,motor_down_pin);
+}
+
+void motor_up(void) {
+  motor_stop();
+  GPIO_setOutputLowOnPin(motor_port,motor_up_pin);
+}
+
+void ports_init(void) {
+			    
+			    motor_stop();
+        //Set P1.x to output direction
+        GPIO_setAsOutputPin(
+			    motor_port,motor_down_pin+motor_up_pin
+                );
+
+	
+}
+
+void adc_init(void) {
 
         //Enable A/D channel A0
         GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P6,
@@ -141,10 +170,63 @@ void main(void)
                                 ADC12_A_MEMORY_0,
                                 ADC12_A_REPEATED_SINGLECHANNEL);
 
+}
+
+void uart_init(void) {
+
+}
+
+void rtc_init(void) {
+
+}
+
+void timer_init(void) {
+
+}
+
+void lcd_init(void) {
+
+}
+
+void temperature_update(uint16_t *tmp, uint16_t *tmp_buffer, int buffer_length) {
+  *tmp=0;
+  int i;
+
+  for(i=0;i<buffer_length;i++) {
+    *tmp+=tmp_buffer[i];
+  }
+  
+}
+
+
+
+void main(void)
+{
+  int temperature;
+
+        //Stop Watchdog Timer
+        WDT_A_hold(WDT_A_BASE);
+
+	ports_init();
+	
+	adc_init();
+
+	uart_init();
+
+	set_zero(temperature_buffer,temperature_buffer_size);
+
+
+
         //Enter LPM4, Enable interrupts
         __bis_SR_register(LPM4_bits + GIE);
+
         //For debugger
         __no_operation();
+
+	while(1) {
+	  temperature_update(&temperature,temperature_buffer,temperature_buffer_size);
+	}
+
 }
 
 #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
@@ -163,7 +245,7 @@ void ADC12ISR(void)
         case  ADC12IV_ADC12TOVIFG: break;         //Vector  4:  ADC timing overflow
         case  ADC12IV_ADC12IFG0:                //Vector  6:  ADC12IFG0
                 //Move results
-                results[index] =
+                temperature_buffer[index] =
                         ADC12_A_getResults(ADC12_A_BASE,
                                            ADC12_A_MEMORY_0);
 
