@@ -70,7 +70,14 @@
 #define motor_up_pin GPIO_PIN1
 #define motor_port GPIO_PORT_P1
 
+#define usart_port GPIO_PORT_P3
+#define usart_rx_pin GPIO_PIN4 
+#define usart_tx_pin GPIO_PIN5
+
+
 #define   temperature_buffer_size   8
+
+
 
 volatile uint16_t temperature_buffer[temperature_buffer_size];
 //Needs to be global in this
@@ -172,9 +179,81 @@ void adc_init(void) {
 
 }
 
-void uart_init(void) {
+void usart_init(void) {
+        //P3.4,5 = USCI_A0 TXD/RXD
+        GPIO_setAsPeripheralModuleFunctionInputPin(
+						   usart_port
+						   usart_rx_pin + usart_tx_pin
+                );
+
+        //Baudrate = 9600, clock freq = 1.048MHz
+        //UCBRx = 109, UCBRFx = 0, UCBRSx = 2, UCOS16 = 0
+        if ( STATUS_FAIL == USCI_A_UART_initAdvance(USCI_A0_BASE,
+                                                    USCI_A_UART_CLOCKSOURCE_SMCLK,
+                                                    109,
+                                                    0,
+                                                    2,
+                                                    USCI_A_UART_NO_PARITY,
+                                                    USCI_A_UART_LSB_FIRST,
+                                                    USCI_A_UART_ONE_STOP_BIT,
+                                                    USCI_A_UART_MODE,
+                                                    USCI_A_UART_LOW_FREQUENCY_BAUDRATE_GENERATION ))
+                return;
+
+        //Enable UART module for operation
+        USCI_A_UART_enable(USCI_A0_BASE);
+
+        //Enable Receive Interrupt
+        USCI_A_UART_clearInterruptFlag(USCI_A0_BASE,
+                                       USCI_A_UART_RECEIVE_INTERRUPT);
+        USCI_A_UART_enableInterrupt(USCI_A0_BASE,
+                                    USCI_A_UART_RECEIVE_INTERRUPT);
+
+        __enable_interrupt();
+
 
 }
+
+
+
+void usart_printf(const char *format, ...) {
+
+  va_list arg;
+  int done;
+  uint8_t ctrl, psctrl;
+
+  USCI_A_UART_clearInterruptFlag(USCI_A0_BASE,   
+
+  /*pass arguments through to the system printf*/
+  va_start (arg, format);
+  done = vprintf (format, arg);
+  va_end (arg);
+
+				 fflush(stdout);
+				 
+				 while(USCI_A_UART_queryStatusFlags 	(USCI_A0_BASE,USCI_A_UART_BUSY ));
+				 
+}
+
+/**
+   Function that writes one character to the selected USART.
+
+   The special character \\n is forwarded as \\r to \a stream.
+*/
+int usart_putchar(char c, FILE *s) {
+  // Load data onto buffer
+
+
+  USCI_A_UART_transmitData(USCI_A0_BASE,
+			   c);
+
+  while(!USCI_A_UART_getInterruptStatus(USCI_A0_BASE, USCI_A_UART_TRANSMIT_INTERRUPT_FLAG ); 
+
+  return 0;
+}
+
+
+static FILE usart_out = FDEV_SETUP_STREAM( usart_putchar, NULL, _FDEV_SETUP_WRITE );
 
 void rtc_init(void) {
 
@@ -203,7 +282,7 @@ void temperature_update(uint16_t *tmp, uint16_t *tmp_buffer, int buffer_length) 
 void main(void)
 {
   int temperature;
-
+  stdout = &usart_out;
         //Stop Watchdog Timer
         WDT_A_hold(WDT_A_BASE);
 
@@ -211,7 +290,7 @@ void main(void)
 	
 	adc_init();
 
-	uart_init();
+	usart_init();
 
 	set_zero(temperature_buffer,temperature_buffer_size);
 
