@@ -209,7 +209,7 @@ void usart_init(void) {
   USCI_A_UART_enableInterrupt(USCI_A0_BASE,
 			      USCI_A_UART_RECEIVE_INTERRUPT);
 
-  __enable_interrupt();
+
 
 
 }
@@ -222,133 +222,140 @@ void usart_printf(const char *format, ...) {
   int done;
   uint8_t ctrl, psctrl;
 
-  USCI_A_UART_clearInterruptFlag(USCI_A0_BASE,   
 
-				 /*pass arguments through to the system printf*/
-				 va_start (arg, format);
-				 done = vprintf (format, arg);
-				 va_end (arg);
 
-				 fflush(stdout);
+  /*pass arguments through to the system printf*/
+  va_start (arg, format);
+  done = vprintf (format, arg);
+  va_end (arg);
+
+  fflush(stdout);
 				 
-				 while(USCI_A_UART_queryStatusFlags 	(USCI_A0_BASE,USCI_A_UART_BUSY ));
+  while(USCI_A_UART_queryStatusFlags 	(USCI_A0_BASE,USCI_A_UART_BUSY ));
 				 
-				 }
+		
+}
 
-    /**
-       Function that writes one character to the selected USART.
+/**
+   Function that writes one character to the selected USART.
 
-       The special character \\n is forwarded as \\r to \a stream.
-    */
-    int usart_putchar(char c, FILE *s) {
-    // Load data onto buffer
-
-
-    USCI_A_UART_transmitData(USCI_A0_BASE,
-			     c);
-
-    while(!USCI_A_UART_getInterruptStatus(USCI_A0_BASE, USCI_A_UART_TRANSMIT_INTERRUPT_FLAG ); 
-
-	  return 0;
-	  }
+   The special character \\n is forwarded as \\r to \a stream.
+*/
+int usart_putchar(char c, FILE *s) {
+  // Load data onto buffer
 
 
-    static FILE usart_out = FDEV_SETUP_STREAM( usart_putchar, NULL, _FDEV_SETUP_WRITE );
+  USCI_A_UART_transmitData(USCI_A0_BASE,
+			   c);
 
-    void rtc_init(void) {
+  while(!USCI_A_UART_getInterruptStatus(USCI_A0_BASE, 
+					USCI_A_UART_TRANSMIT_INTERRUPT_FLAG )
+	); 
 
-    }
+  return 0;
+}
 
-    void timer_init(void) {
 
-    }
+static FILE usart_out = FDEV_SETUP_STREAM( usart_putchar, 
+					   NULL, 
+					   _FDEV_SETUP_WRITE );
 
-    void lcd_init(void) {
+void rtc_init(void) {
 
-    }
+}
 
-    void temperature_update(uint16_t *tmp, uint16_t *tmp_buffer, int buffer_length) {
-      *tmp=0;
-      int i;
+void timer_init(void) {
 
-      for(i=0;i<buffer_length;i++) {
-	*tmp+=tmp_buffer[i];
-      }
+}
+
+void lcd_init(void) {
+
+}
+
+void temperature_update(uint16_t *tmp, uint16_t *tmp_buffer, int buffer_length) {
+  *tmp=0;
+  int i;
+
+  for(i=0;i<buffer_length;i++) {
+    *tmp+=tmp_buffer[i];
+  }
   
-    }
+}
 
 
 
-    void main(void)
-    {
-      int temperature;
-      stdout = &usart_out;
-      //Stop Watchdog Timer
-      WDT_A_hold(WDT_A_BASE);
+void main(void)
+{
+  int temperature;
+  stdout = &usart_out;
+  //Stop Watchdog Timer
+  WDT_A_hold(WDT_A_BASE);
 
-      ports_init();
+  ports_init();
 	
-      adc_init();
+  adc_init();
 
-      usart_init();
+  usart_init();
 
-      set_zero(temperature_buffer,temperature_buffer_size);
+  set_zero(temperature_buffer,temperature_buffer_size);
 
 
 
-      //Enter LPM4, Enable interrupts
-      __bis_SR_register(LPM4_bits + GIE);
+  //Enter LPM4, Enable interrupts
+  __bis_SR_register(LPM4_bits + GIE);
 
-      //For debugger
-      __no_operation();
 
-      while(1) {
-	temperature_update(&temperature,temperature_buffer,temperature_buffer_size);
-      }
+  __enable_interrupt();
+  //For debugger
+  __no_operation();
 
-    }
+  while(1) {
+    temperature_update(&temperature,temperature_buffer,temperature_buffer_size);
+  }
+
+}
 
 #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
 #pragma vector=ADC12_VECTOR
-    __interrupt
+__interrupt
 #elif defined(__GNUC__)
-      __attribute__((interrupt(ADC12_VECTOR)))
+__attribute__((interrupt(ADC12_VECTOR)))
 #endif
-      void ADC12ISR(void)
-    {
-      static uint8_t index = 0;
+void ADC12ISR(void)
+{
+  static uint8_t index = 0;
 
-      switch (ADC12IV) {
-      case  ADC12IV_NONE: break;         //Vector  0:  No interrupt
-      case  ADC12IV_ADC12OVIFG: break;         //Vector  2:  ADC overflow
-      case  ADC12IV_ADC12TOVIFG: break;         //Vector  4:  ADC timing overflow
-      case  ADC12IV_ADC12IFG0:                //Vector  6:  ADC12IFG0
-	//Move results
-	temperature_buffer[index] =
-	  ADC12_A_getResults(ADC12_A_BASE,
-			     ADC12_A_MEMORY_0);
+  switch (ADC12IV) {
+  case  ADC12IV_NONE: break;         //Vector  0:  No interrupt
+  case  ADC12IV_ADC12OVIFG: break;         //Vector  2:  ADC overflow
+  case  ADC12IV_ADC12TOVIFG: break;         //Vector  4:  ADC timing overflow
+  case  ADC12IV_ADC12IFG0:                //Vector  6:  ADC12IFG0
+    //Move results
+    temperature_buffer[index] =
+      ADC12_A_getResults(ADC12_A_BASE,
+			 ADC12_A_MEMORY_0);
 
-	//Increment results index, modulo;
-	//Set Breakpoint1 here and watch results[]
-	index++;
+    //Increment results index, modulo;
+    //Set Breakpoint1 here and watch results[]
+    index++;
 
-	if (index == 8)
-	  index = 0;
-      case  ADC12IV_ADC12IFG1: break;         
-      case ADC12IV_ADC12IFG2: break;         
-      case ADC12IV_ADC12IFG3: break;         
-      case ADC12IV_ADC12IFG4: break;         
-      case ADC12IV_ADC12IFG5: break;         
-      case ADC12IV_ADC12IFG6: break;         
-      case ADC12IV_ADC12IFG7: break;         
-      case ADC12IV_ADC12IFG8: break;         
-      case ADC12IV_ADC12IFG9: break;         
-      case ADC12IV_ADC12IFG10: break;         
-      case ADC12IV_ADC12IFG11: break;         
-      case ADC12IV_ADC12IFG12: break;         
-      case ADC12IV_ADC12IFG13: break;         
-      case ADC12IV_ADC12IFG14: break;         
-      case ADC12IV_ADC12IFG15: break;         
-      default: break;
-      }
-    }
+    if (index == 8)
+      index = 0;
+  case  ADC12IV_ADC12IFG1: break;         
+  case ADC12IV_ADC12IFG2: break;         
+  case ADC12IV_ADC12IFG3: break;         
+  case ADC12IV_ADC12IFG4: break;         
+  case ADC12IV_ADC12IFG5: break;         
+  case ADC12IV_ADC12IFG6: break;         
+  case ADC12IV_ADC12IFG7: break;         
+  case ADC12IV_ADC12IFG8: break;         
+  case ADC12IV_ADC12IFG9: break;         
+  case ADC12IV_ADC12IFG10: break;         
+  case ADC12IV_ADC12IFG11: break;         
+  case ADC12IV_ADC12IFG12: break;         
+  case ADC12IV_ADC12IFG13: break;         
+  case ADC12IV_ADC12IFG14: break;         
+  case ADC12IV_ADC12IFG15: break;         
+  default: break;
+  }
+}
