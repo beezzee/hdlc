@@ -1,4 +1,4 @@
-DEVICE      = MSP430F5529
+DEVICE      = msp430f5529
 CC          = msp430-gcc
 OBJCOPY     = msp430-objcopy
 AR          = msp430-ar

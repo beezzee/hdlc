@@ -64,6 +64,12 @@
 //!
 //******************************************************************************
 
+#include <msp430.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+
 #include "driverlib.h"
 
 #define motor_down_pin GPIO_PIN0
@@ -77,6 +83,7 @@
 
 #define   temperature_buffer_size   8
 
+#define UART_PRINTF
 
 
 volatile uint16_t temperature_buffer[temperature_buffer_size];
@@ -182,7 +189,7 @@ void adc_init(void) {
 void usart_init(void) {
   //P3.4,5 = USCI_A0 TXD/RXD
   GPIO_setAsPeripheralModuleFunctionInputPin(
-					     usart_port
+					     usart_port,
 					     usart_rx_pin + usart_tx_pin
 					     );
 
@@ -214,51 +221,58 @@ void usart_init(void) {
 
 }
 
+#define usart_printf( X ) (printf(X))
+
+/* void usart_printf(const char *format, ...) { */
+
+/*   va_list arg; */
+/*   int done; */
+/*   uint8_t ctrl, psctrl; */
 
 
-void usart_printf(const char *format, ...) {
 
-  va_list arg;
-  int done;
-  uint8_t ctrl, psctrl;
+/*   /\*pass arguments through to the system printf*\/ */
+/*   va_start (arg, format); */
+/*   done = vprintf (format, arg); */
+/*   va_end (arg); */
 
-
-
-  /*pass arguments through to the system printf*/
-  va_start (arg, format);
-  done = vprintf (format, arg);
-  va_end (arg);
-
-  fflush(stdout);
+/*   fflush(stdout); */
 				 
-  while(USCI_A_UART_queryStatusFlags 	(USCI_A0_BASE,USCI_A_UART_BUSY ));
+/*   while(USCI_A_UART_queryStatusFlags 	(USCI_A0_BASE,USCI_A_UART_BUSY )); */
 				 
 		
-}
+/* } */
+
 
 /**
    Function that writes one character to the selected USART.
 
    The special character \\n is forwarded as \\r to \a stream.
 */
-int usart_putchar(char c, FILE *s) {
-  // Load data onto buffer
+/* int usart_putchar(char c, FILE *s) { */
+/*   // Load data onto buffer */
 
 
+
+/*   return 0; */
+/* } */
+
+int putchar(int s)
+{
   USCI_A_UART_transmitData(USCI_A0_BASE,
-			   c);
+			   (char) s);
 
   while(!USCI_A_UART_getInterruptStatus(USCI_A0_BASE, 
 					USCI_A_UART_TRANSMIT_INTERRUPT_FLAG )
 	); 
 
-  return 0;
+
+  return(s);
 }
 
-
-static FILE usart_out = FDEV_SETUP_STREAM( usart_putchar, 
-					   NULL, 
-					   _FDEV_SETUP_WRITE );
+/* static FILE usart_out = FDEV_SETUP_STREAM( usart_putchar,  */
+/* 					   NULL,  */
+/* 					   _FDEV_SETUP_WRITE ); */
 
 void rtc_init(void) {
 
@@ -272,7 +286,7 @@ void lcd_init(void) {
 
 }
 
-void temperature_update(uint16_t *tmp, uint16_t *tmp_buffer, int buffer_length) {
+void temperature_update(uint16_t *tmp, volatile uint16_t *tmp_buffer, int buffer_length) {
   *tmp=0;
   int i;
 
@@ -287,7 +301,7 @@ void temperature_update(uint16_t *tmp, uint16_t *tmp_buffer, int buffer_length) 
 void main(void)
 {
   int temperature;
-  stdout = &usart_out;
+  //  stdout = &usart_out;
   //Stop Watchdog Timer
   WDT_A_hold(WDT_A_BASE);
 
@@ -309,10 +323,12 @@ void main(void)
   //For debugger
   __no_operation();
 
+  usart_printf("Temperature: ");
   while(1) {
     temperature_update(&temperature,temperature_buffer,temperature_buffer_size);
   }
-
+  
+  
 }
 
 #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
@@ -320,6 +336,7 @@ void main(void)
 __interrupt
 #elif defined(__GNUC__)
 __attribute__((interrupt(ADC12_VECTOR)))
+//__attribute__((interrupt(TIMER1_A1_VECTOR)))
 #endif
 void ADC12ISR(void)
 {
@@ -341,21 +358,6 @@ void ADC12ISR(void)
 
     if (index == 8)
       index = 0;
-  case  ADC12IV_ADC12IFG1: break;         
-  case ADC12IV_ADC12IFG2: break;         
-  case ADC12IV_ADC12IFG3: break;         
-  case ADC12IV_ADC12IFG4: break;         
-  case ADC12IV_ADC12IFG5: break;         
-  case ADC12IV_ADC12IFG6: break;         
-  case ADC12IV_ADC12IFG7: break;         
-  case ADC12IV_ADC12IFG8: break;         
-  case ADC12IV_ADC12IFG9: break;         
-  case ADC12IV_ADC12IFG10: break;         
-  case ADC12IV_ADC12IFG11: break;         
-  case ADC12IV_ADC12IFG12: break;         
-  case ADC12IV_ADC12IFG13: break;         
-  case ADC12IV_ADC12IFG14: break;         
-  case ADC12IV_ADC12IFG15: break;         
   default: break;
   }
 }
