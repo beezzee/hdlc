@@ -10321,6 +10321,11 @@ extern "C" {
 /************************************************************
 * USCI Ax
 ************************************************************/
+//patch to add missing defines
+#if (defined(__MSP430_HAS_USCI_A0__) || defined (__MSP430_HAS_USCI_A1__) || defined (__MSP430_HAS_USCI_A2__)) 
+#define __MSP430_HAS_USCI_Ax__
+#endif 
+
 #ifdef  __MSP430_HAS_USCI_Ax__       /* Definition to show that Module is available */
 
 #define OFS_UCAxCTLW0         (0x0000)  /* USCI Ax Control Word Register 0 */
