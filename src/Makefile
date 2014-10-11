@@ -18,26 +18,27 @@ EXSRCDIR    = .
 SRCDIR      = $(INCDIR)
 OBJDIR      = objs
 EXOBJECT    = $(OBJDIR)/$(EXECUTABLE).o
-SOURCES     = $(wildcard $(SRCDIR)/*.c)
-OBJECTS     = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(SOURCES)))
+SOURCES     = $(notdir $(wildcard $(SRCDIR)/*.c) assert.c) 
+OBJECTS     = $(SOURCES:.c=.o)
 ######################################
 INCLUDES    = -I. -I$(INCDIR)
 ######################################
+
+vpath %.c $(SRCDIR)
+vpath %.o $(OBJDIR)
 
 all: init $(EXECUTABLE)
 
 init:
 	mkdir -p $(OBJDIR)
 
-$(EXECUTABLE): $(EXOBJECT) $(OBJECTS)
-	$(CC) $(LDFLAGS) $(EXOBJECT) $(OBJECTS) -o $@
+$(EXECUTABLE):  $(OBJECTS)
+	$(CC)  $(LDFLAGS) $^ -o $@
 
-$(EXOBJECT): $(EXSRCDIR)/$(EXECUTABLE).c
-	$(CC) $(INCLUDES) $(CFLAGS) -c $< -o $@
+%.o: %.c 
+	$(CC) $(INCLUDES) $(CFLAGS) -c $< -o $(OBJDIR)/$@
 
-$(OBJECTS): $(OBJDIR)/%.o: $(SRCDIR)/%.c
-	$(CC) $(INCLUDES) $(CFLAGS) -c $< -o $@
-
+.PHONY: clean
 clean:
 	rm -rf $(OBJDIR)
 	rm -rf $(EXECUTABLE)
