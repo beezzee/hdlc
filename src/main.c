@@ -92,6 +92,9 @@ volatile uint16_t temperature_buffer[temperature_buffer_size];
 //compiler removes it because it
 //is not used for anything.
 
+void memset_16(void *block, int c, size_t size){
+  memset(block,c,2*size);
+}
 
 void motor_stop(void) {
   //Set all P1 pins HI
@@ -311,7 +314,7 @@ void main(void)
 
   usart_init();
 
-  set_zero(temperature_buffer,temperature_buffer_size);
+  memset_16((void *) temperature_buffer,0,temperature_buffer_size);
 
 
 
