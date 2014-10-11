@@ -2,6 +2,7 @@ DEVICE      = msp430f5529
 CC          = msp430-gcc
 OBJCOPY     = msp430-objcopy
 AR          = msp430-ar
+OBJDUMP     = msp430-objdump
 OS 			= $(shell uname -o)
 ######################################
 INCDIR      = ../../driverlib_1_90_00_65/driverlib/MSP430F5xx_6xx
@@ -13,32 +14,42 @@ LDDIR       = $(GCCINCDIR)/$(shell echo $(DEVICE) | tr A-Z a-z)
 CFLAGS      = -O2 -D__$(DEVICE)__ -mmcu=$(DEVICE) -ffunction-sections -fdata-sections
 LDFLAGS     = -mmcu=$(DEVICE) -Wl,--gc-sections
 ######################################
-EXECUTABLE  = main
+EXECUTABLES = main
 EXSRCDIR    = .
 SRCDIR      = $(INCDIR)
 OBJDIR      = objs
-EXOBJECT    = $(OBJDIR)/$(EXECUTABLE).o
-SOURCES     = $(notdir $(wildcard $(SRCDIR)/*.c) assert.c) 
+EXOBJECT    = $(OBJDIR)/$(EXECUTABLES).o
+SOURCES     = $(notdir $(wildcard $(SRCDIR)/*.c) $(wildcard ./*.c)) 
 OBJECTS     = $(SOURCES:.c=.o)
+ELF         = $(addsuffix .elf,$(EXECUTABLES))
 ######################################
 INCLUDES    = -I. -I$(INCDIR)
 ######################################
 
 vpath %.c $(SRCDIR)
-vpath %.o $(OBJDIR)
 
-all: init $(EXECUTABLE)
+all:  $(ELF)
 
 init:
 	mkdir -p $(OBJDIR)
 
-$(EXECUTABLE):  $(OBJECTS)
+%.elf: $(OBJECTS)
 	$(CC)  $(LDFLAGS) $^ -o $@
 
+.SECONDARY: $(OBJECTS)
 %.o: %.c 
-	$(CC) $(INCLUDES) $(CFLAGS) -c $< -o $(OBJDIR)/$@
+	$(CC) $(INCLUDES) $(CFLAGS) -c $< -o $@
+
+%.lst:  %.o
+	$(OBJDUMP) -d -h -S -z $< > $@	
+
+%.lss:  %.elf
+	$(OBJDUMP) -d -h -S -z $< > $@	
+
 
 .PHONY: clean
 clean:
-	rm -rf $(OBJDIR)
-	rm -rf $(EXECUTABLE)
+	rm -rf $(OBJECTS)
+	rm -rf $(ELF)
+	rm -rf *.lss
+	rm -rf *.lst
