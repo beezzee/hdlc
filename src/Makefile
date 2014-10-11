@@ -11,7 +11,7 @@ GCCINCDIR   = $(shell cygpath -m $(dir $(shell which $(CC)))../../../../ccs_base
 endif
 LDDIR       = $(GCCINCDIR)/$(shell echo $(DEVICE) | tr A-Z a-z)
 CFLAGS      = -O2 -D__$(DEVICE)__ -mmcu=$(DEVICE) -ffunction-sections -fdata-sections
-LDFLAGS     = -T $(LDDIR).ld -mmcu=$(DEVICE) -Wl,--gc-sections
+LDFLAGS     = -mmcu=$(DEVICE) -Wl,--gc-sections
 ######################################
 EXECUTABLE  = main
 EXSRCDIR    = .
