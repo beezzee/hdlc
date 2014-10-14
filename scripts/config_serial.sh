@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DEVICE=/dev/ttyUSB0
+DEVICE=/dev/ttyACM1
 echo
 echo "Configure serial interface $DEVICE:"
 echo "8 bit characters"
