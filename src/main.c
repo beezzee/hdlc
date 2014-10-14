@@ -80,6 +80,8 @@
 #define usart_rx_pin GPIO_PIN4 
 #define usart_tx_pin GPIO_PIN5
 
+#define usart_base USCI_A0_BASE
+
 
 #define   temperature_buffer_size   8
 
@@ -213,12 +215,12 @@ void usart_init(void) {
   }
 
   //Enable UART module for operation
-  USCI_A_UART_enable(USCI_A0_BASE);
+  USCI_A_UART_enable(usart_base);
 
   //Enable Receive Interrupt
-  USCI_A_UART_clearInterruptFlag(USCI_A0_BASE,
+  USCI_A_UART_clearInterruptFlag(usart_base,
 				 USCI_A_UART_RECEIVE_INTERRUPT);
-  USCI_A_UART_enableInterrupt(USCI_A0_BASE,
+  USCI_A_UART_enableInterrupt(usart_base,
 			      USCI_A_UART_RECEIVE_INTERRUPT);
 
 
@@ -243,7 +245,7 @@ void usart_init(void) {
 
 /*   fflush(stdout); */
 				 
-/*   while(USCI_A_UART_queryStatusFlags 	(USCI_A0_BASE,USCI_A_UART_BUSY )); */
+/*   while(USCI_A_UART_queryStatusFlags 	(usart_base,USCI_A_UART_BUSY )); */
 				 
 		
 /* } */
@@ -264,10 +266,10 @@ void usart_init(void) {
 
 int putchar(int s)
 {
-  USCI_A_UART_transmitData(USCI_A0_BASE,
+  USCI_A_UART_transmitData(usart_base,
 			   (char) s);
 
-  while(!USCI_A_UART_getInterruptStatus(USCI_A0_BASE, 
+  while(!USCI_A_UART_getInterruptStatus(usart_base, 
 					USCI_A_UART_TRANSMIT_INTERRUPT_FLAG )
 	); 
 
@@ -325,6 +327,7 @@ void main(void)
 
 
   __enable_interrupt();
+
   //For debugger
   __no_operation();
 
