@@ -198,17 +198,19 @@ void usart_init(void) {
 
   //Baudrate = 9600, clock freq = 1.048MHz
   //UCBRx = 109, UCBRFx = 0, UCBRSx = 2, UCOS16 = 0
-  if ( STATUS_FAIL == USCI_A_UART_initAdvance(USCI_A0_BASE,
-					      USCI_A_UART_CLOCKSOURCE_SMCLK,
-					      109,
-					      0,
-					      2,
-					      USCI_A_UART_NO_PARITY,
-					      USCI_A_UART_LSB_FIRST,
-					      USCI_A_UART_ONE_STOP_BIT,
-					      USCI_A_UART_MODE,
-					      USCI_A_UART_LOW_FREQUENCY_BAUDRATE_GENERATION ))
+  if ( STATUS_FAIL 
+       == USCI_A_UART_initAdvance(USCI_A0_BASE,
+				  USCI_A_UART_CLOCKSOURCE_SMCLK,
+				  109,
+				  0,
+				  2,
+				  USCI_A_UART_NO_PARITY,
+				  USCI_A_UART_LSB_FIRST,
+				  USCI_A_UART_ONE_STOP_BIT,
+				  USCI_A_UART_MODE,
+				  USCI_A_UART_LOW_FREQUENCY_BAUDRATE_GENERATION )){
     return;
+  }
 
   //Enable UART module for operation
   USCI_A_UART_enable(USCI_A0_BASE);
