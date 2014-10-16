@@ -82,9 +82,19 @@
 #define led_2_port GPIO_PORT_P4
 #define led_2_pin GPIO_PIN7
 
-#define usart_port GPIO_PORT_P3
-#define usart_rx_pin GPIO_PIN4 
-#define usart_tx_pin GPIO_PIN5
+#define usart_port GPIO_PORT_P4
+#define usart_rx_pin GPIO_PIN5 
+#define usart_tx_pin GPIO_PIN4
+
+
+//from http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSP430BaudRateConverter/index.html
+//9.6 kbaud
+#define usart_clock_prescale   3
+#define usart_mod_reg_1  0
+#define usart_mod_reg_2  3
+#define usart_oversampling USCI_A_UART_LOW_FREQUENCY_BAUDRATE_GENERATION 
+
+#define usart_base USCI_A1_BASE
 
 #define clock_source_master UCS_XT1CLK_SELECT
 #define clock_divider_master UCS_CLOCK_DIVIDER_1
@@ -92,7 +102,7 @@
 #define clock_source_subsystem UCS_XT1CLK_SELECT
 #define clock_divider_subsystem UCS_CLOCK_DIVIDER_1
 
-#define usart_base USCI_A1_BASE
+
 
 
 #define   temperature_buffer_size   8
@@ -223,14 +233,14 @@ void usart_init(void) {
   if ( STATUS_FAIL 
        == USCI_A_UART_initAdvance(usart_base,
 				  USCI_A_UART_CLOCKSOURCE_SMCLK,
-				  109,
-				  0,
-				  2,
+				  usart_clock_prescale,
+				  usart_mod_reg_1,
+				  usart_mod_reg_2,
 				  USCI_A_UART_NO_PARITY,
 				  USCI_A_UART_LSB_FIRST,
 				  USCI_A_UART_ONE_STOP_BIT,
 				  USCI_A_UART_MODE,
-				  USCI_A_UART_LOW_FREQUENCY_BAUDRATE_GENERATION )){
+				  usart_oversampling)){
     return;
   }
 
