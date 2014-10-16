@@ -80,7 +80,7 @@
 #define usart_rx_pin GPIO_PIN4 
 #define usart_tx_pin GPIO_PIN5
 
-#define usart_base USCI_A0_BASE
+#define usart_base USCI_A1_BASE
 
 
 #define   temperature_buffer_size   8
@@ -201,7 +201,7 @@ void usart_init(void) {
   //Baudrate = 9600, clock freq = 1.048MHz
   //UCBRx = 109, UCBRFx = 0, UCBRSx = 2, UCOS16 = 0
   if ( STATUS_FAIL 
-       == USCI_A_UART_initAdvance(USCI_A0_BASE,
+       == USCI_A_UART_initAdvance(usart_base,
 				  USCI_A_UART_CLOCKSOURCE_SMCLK,
 				  109,
 				  0,
