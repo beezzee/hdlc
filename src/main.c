@@ -348,6 +348,7 @@ void main(void)
     temperature_update(&temperature,temperature_buffer,temperature_buffer_size);
     GPIO_toggleOutputOnPin(led_1_port,led_1_pin);
     for(i=50000;i>0;i--);
+    GPIO_toggleOutputOnPin(led_2_port,led_2_pin);
   }
   
   
