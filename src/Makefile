@@ -11,7 +11,7 @@ ifeq ($(OS),Cygwin)
 GCCINCDIR   = $(shell cygpath -m $(dir $(shell which $(CC)))../../../../ccs_base/msp430/include_gcc)
 endif
 LDDIR       = $(GCCINCDIR)/$(shell echo $(DEVICE) | tr A-Z a-z)
-CFLAGS      = -O2 -D__$(DEVICE)__ -mmcu=$(DEVICE) -ffunction-sections -fdata-sections
+CFLAGS      = -O0 -g -D__$(DEVICE)__ -mmcu=$(DEVICE) -ffunction-sections -fdata-sections
 LDFLAGS     = -mmcu=$(DEVICE) -Wl,--gc-sections
 ######################################
 EXECUTABLES = main
