@@ -86,6 +86,11 @@
 #define usart_rx_pin GPIO_PIN4 
 #define usart_tx_pin GPIO_PIN5
 
+#define clock_source_master UCS_XT1CLK_SELECT
+#define clock_divider_master UCS_CLOCK_DIVIDER_1
+
+#define clock_source_subsystem UCS_XT1CLK_SELECT
+#define clock_divider_subsystem UCS_CLOCK_DIVIDER_1
 
 #define usart_base USCI_A1_BASE
 
@@ -135,6 +140,11 @@ void ports_init(void) {
 		      led_2_port,led_2_pin);
 
 	
+}
+
+void clocks_init(void) {
+  UCS_clockSignalInit(UCS_MCLK,clock_source_master,clock_divider_master);
+  UCS_clockSignalInit(UCS_SMCLK,clock_source_subsystem,clock_divider_subsystem);
 }
 
 void adc_init(void) {
