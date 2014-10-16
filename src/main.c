@@ -72,13 +72,20 @@
 
 #include "driverlib.h"
 
-#define motor_down_pin GPIO_PIN0
-#define motor_up_pin GPIO_PIN1
+#define motor_down_pin GPIO_PIN1
+#define motor_up_pin GPIO_PIN2
 #define motor_port GPIO_PORT_P1
+
+#define led_1_port GPIO_PORT_P1
+#define led_1_pin GPIO_PIN0
+
+#define led_2_port GPIO_PORT_P4
+#define led_2_pin GPIO_PIN7
 
 #define usart_port GPIO_PORT_P3
 #define usart_rx_pin GPIO_PIN4 
 #define usart_tx_pin GPIO_PIN5
+
 
 #define usart_base USCI_A1_BASE
 
@@ -121,6 +128,11 @@ void ports_init(void) {
   GPIO_setAsOutputPin(
 		      motor_port,motor_down_pin+motor_up_pin
 		      );
+  GPIO_setAsOutputPin(
+		      led_1_port,led_1_pin);
+
+  GPIO_setAsOutputPin(
+		      led_2_port,led_2_pin);
 
 	
 }
@@ -198,8 +210,6 @@ void usart_init(void) {
 					     usart_rx_pin + usart_tx_pin
 					     );
 
-  //Baudrate = 9600, clock freq = 1.048MHz
-  //UCBRx = 109, UCBRFx = 0, UCBRSx = 2, UCOS16 = 0
   if ( STATUS_FAIL 
        == USCI_A_UART_initAdvance(usart_base,
 				  USCI_A_UART_CLOCKSOURCE_SMCLK,
@@ -220,8 +230,8 @@ void usart_init(void) {
   //Enable Receive Interrupt
   USCI_A_UART_clearInterruptFlag(usart_base,
 				 USCI_A_UART_RECEIVE_INTERRUPT);
-  USCI_A_UART_enableInterrupt(usart_base,
-			      USCI_A_UART_RECEIVE_INTERRUPT);
+  //  USCI_A_UART_enableInterrupt(usart_base,
+  //			      USCI_A_UART_RECEIVE_INTERRUPT);
 
 
 
@@ -307,7 +317,7 @@ void temperature_update(uint16_t *tmp, volatile uint16_t *tmp_buffer, int buffer
 
 void main(void)
 {
-  int temperature;
+  unsigned int temperature,i;
   //  stdout = &usart_out;
   //Stop Watchdog Timer
   WDT_A_hold(WDT_A_BASE);
@@ -323,49 +333,53 @@ void main(void)
 
 
   //Enter LPM4, Enable interrupts
-  __bis_SR_register(LPM4_bits + GIE);
+  //  __bis_SR_register(LPM4_bits + GIE);
 
 
-  __enable_interrupt();
+  //  __enable_interrupt();
 
   //For debugger
   __no_operation();
 
   usart_printf("Temperature: ");
+
+
   while(1) {
     temperature_update(&temperature,temperature_buffer,temperature_buffer_size);
+    GPIO_toggleOutputOnPin(led_1_port,led_1_pin);
+    for(i=50000;i>0;i--);
   }
   
   
 }
 
-#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
-#pragma vector=ADC12_VECTOR
-__interrupt
-#elif defined(__GNUC__)
-__attribute__((interrupt(ADC12_VECTOR)))
-//__attribute__((interrupt(TIMER1_A1_VECTOR)))
-#endif
-void ADC12ISR(void)
-{
-  static uint8_t index = 0;
+/* #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__) */
+/* #pragma vector=ADC12_VECTOR */
+/* __interrupt */
+/* #elif defined(__GNUC__) */
+/* __attribute__((interrupt(ADC12_VECTOR))) */
+/* //__attribute__((interrupt(TIMER1_A1_VECTOR))) */
+/* #endif */
+/* void ADC12ISR(void) */
+/* { */
+/*   static uint8_t index = 0; */
 
-  switch (ADC12IV) {
-  case  ADC12IV_NONE: break;         //Vector  0:  No interrupt
-  case  ADC12IV_ADC12OVIFG: break;         //Vector  2:  ADC overflow
-  case  ADC12IV_ADC12TOVIFG: break;         //Vector  4:  ADC timing overflow
-  case  ADC12IV_ADC12IFG0:                //Vector  6:  ADC12IFG0
-    //Move results
-    temperature_buffer[index] =
-      ADC12_A_getResults(ADC12_A_BASE,
-			 ADC12_A_MEMORY_0);
+/*   switch (ADC12IV) { */
+/*   case  ADC12IV_NONE: break;         //Vector  0:  No interrupt */
+/*   case  ADC12IV_ADC12OVIFG: break;         //Vector  2:  ADC overflow */
+/*   case  ADC12IV_ADC12TOVIFG: break;         //Vector  4:  ADC timing overflow */
+/*   case  ADC12IV_ADC12IFG0:                //Vector  6:  ADC12IFG0 */
+/*     //Move results */
+/*     temperature_buffer[index] = */
+/*       ADC12_A_getResults(ADC12_A_BASE, */
+/* 			 ADC12_A_MEMORY_0); */
 
-    //Increment results index, modulo;
-    //Set Breakpoint1 here and watch results[]
-    index++;
+/*     //Increment results index, modulo; */
+/*     //Set Breakpoint1 here and watch results[] */
+/*     index++; */
 
-    if (index == 8)
-      index = 0;
-  default: break;
-  }
-}
+/*     if (index == 8) */
+/*       index = 0; */
+/*   default: break; */
+/*   } */
+/* } */
