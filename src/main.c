@@ -103,6 +103,8 @@
 #define clock_divider_subsystem UCS_CLOCK_DIVIDER_1
 
 
+#define adc_port GPIO_PORT_P6
+#define adc_pin  GPIO_PIN0
 
 
 #define   temperature_buffer_size   8
@@ -160,8 +162,8 @@ void clocks_init(void) {
 void adc_init(void) {
 
   //Enable A/D channel A0
-  GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P6,
-					     GPIO_PIN0
+  GPIO_setAsPeripheralModuleFunctionInputPin(adc_port,
+					     adc_pin
 					     );
 
   //Initialize the ADC12_A Module
