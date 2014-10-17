@@ -96,11 +96,17 @@
 
 #define usart_base USCI_A1_BASE
 
-#define clock_source_master UCS_XT1CLK_SELECT
+#define clock_source_master UCS_XT2CLK_SELECT
 #define clock_divider_master UCS_CLOCK_DIVIDER_1
+#define clock_source_master_external 0
 
 #define clock_source_subsystem UCS_XT1CLK_SELECT
 #define clock_divider_subsystem UCS_CLOCK_DIVIDER_1
+
+#define xt1_freq 32000
+#define xt2_freq 40000000
+//#define xt2_drive_strength UCS_XT2DRIVE_4MHZ_8MH
+#define xt2_drive_strength UCS_XT2DRIVE_24MHZ_32MHZ
 
 
 #define adc_port GPIO_PORT_P6
@@ -155,8 +161,22 @@ void ports_init(void) {
 }
 
 void clocks_init(void) {
-  UCS_clockSignalInit(UCS_MCLK,clock_source_master,clock_divider_master);
   UCS_clockSignalInit(UCS_SMCLK,clock_source_subsystem,clock_divider_subsystem);
+
+  UCS_setExternalClockSource(xt1_freq,xt2_freq);
+
+
+  if (clock_source_master_external) {
+    UCS_XT2Start(xt2_drive_strength);
+  
+
+
+    if (UCS_faultFlagStatus(UCS_XT2OFFG)){
+      printf("Failed to enable XT2. Stay at internal clock.\n");
+    } else {
+      UCS_clockSignalInit(UCS_MCLK,clock_source_master,clock_divider_master);
+    }
+  }
 }
 
 void adc_init(void) {
@@ -371,7 +391,7 @@ void main(void)
   while(1) {
     temperature_update(&temperature,temperature_buffer,temperature_buffer_size);
     GPIO_toggleOutputOnPin(led_1_port,led_1_pin);
-    for(i=500;i>0;i--);
+    for(i=50000;i>0;i--);
     GPIO_toggleOutputOnPin(led_2_port,led_2_pin);
   }
   
