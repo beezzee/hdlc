@@ -113,7 +113,8 @@
 #define adc_pin  GPIO_PIN0
 
 
-#define   temperature_buffer_size   8
+#define  log_temperature_buffer_size   3
+#define  temperature_buffer_size   1 << log_temperature_buffer_size   
 
 #define UART_PRINTF
 
@@ -188,27 +189,31 @@ void adc_init(void) {
 
   //Initialize the ADC12_A Module
   /*
-   * Base address of ADC12_A Module
-   * Use internal ADC12_A bit as sample/hold signal to start conversion
-   * USE MODOSC 5MHZ Digital Oscillator as clock source
-   * Use default clock divider of 1
+   * Base address of ADC12_A Module Use internal ADC12_A bit as
+   * sample/hold signal to start conversion USE SMCLK Digital
+   * Oscillator as clock source Use clock divider of 32. With an
+   * external frequency of 32khz, this gives a sampling frequency of
+   * 1kHz.
    */
   ADC12_A_init(ADC12_A_BASE,
 	       ADC12_A_SAMPLEHOLDSOURCE_SC,
-	       ADC12_A_CLOCKSOURCE_ADC12OSC,
-	       ADC12_A_CLOCKDIVIDER_1);
+	       //ADC12_A_CLOCKSOURCE_ADC12OSC,
+	       ADC12_A_CLOCKSOURCE_SMCLK,
+	       //ADC12_A_CLOCKDIVIDER_1
+	       ADC12_A_CLOCKDIVIDER_32
+	       );
 
   ADC12_A_enable(ADC12_A_BASE);
 
   /*
    * Base address of ADC12_A Module
-   * For memory buffers 0-7 sample/hold for 256 clock cycles
-   * For memory buffers 8-15 sample/hold for 4 clock cycles (default)
+   * For memory buffers 0-7 sample/hold for 128 clock cycles
+   * For memory buffers 8-15 sample/hold for128 clock cycles (default)
    * Enable Multiple Sampling
    */
   ADC12_A_setupSamplingTimer(ADC12_A_BASE,
-			     ADC12_A_CYCLEHOLD_256_CYCLES,
-			     ADC12_A_CYCLEHOLD_4_CYCLES,
+			     ADC12_A_CYCLEHOLD_128_CYCLES,
+			     ADC12_A_CYCLEHOLD_128_CYCLES,
 			     ADC12_A_MULTIPLESAMPLESENABLE);
 
   //Configure Memory Buffer
@@ -280,7 +285,7 @@ void usart_init(void) {
 
 }
 
-#define usart_printf( X ) (printf(X))
+#define usart_printf printf 
 
 /* void usart_printf(const char *format, ...) { */
 
@@ -345,13 +350,16 @@ void lcd_init(void) {
 
 }
 
-void temperature_update(uint16_t *tmp, volatile uint16_t *tmp_buffer, int buffer_length) {
-  *tmp=0;
+void temperature_update(uint16_t *tmp, volatile uint16_t *tmp_buffer, int log_buffer_length) {
   int i;
 
-  for(i=0;i<buffer_length;i++) {
+  *tmp=0;
+
+  for(i=0;i<(1<<log_buffer_length);i++) {
     *tmp+=tmp_buffer[i];
   }
+
+  *tmp = *tmp >> log_buffer_length;
   
 }
 
@@ -359,7 +367,8 @@ void temperature_update(uint16_t *tmp, volatile uint16_t *tmp_buffer, int buffer
 
 void main(void)
 {
-  unsigned int temperature,i;
+  unsigned int i;
+  uint16_t temperature;
   //  stdout = &usart_out;
   //Stop Watchdog Timer
   WDT_A_hold(WDT_A_BASE);
@@ -378,53 +387,58 @@ void main(void)
 
   //Enter LPM4, Enable interrupts
   //  __bis_SR_register(LPM4_bits + GIE);
+  // __bis_SR_register(GIE);
 
 
-  //  __enable_interrupt();
+  __enable_interrupt();
 
   //For debugger
   __no_operation();
 
-  usart_printf("Temperature: ");
+  usart_printf("Start measurements... \n");
 
 
+  i=0;
   while(1) {
-    temperature_update(&temperature,temperature_buffer,temperature_buffer_size);
-    GPIO_toggleOutputOnPin(led_1_port,led_1_pin);
-    for(i=50000;i>0;i--);
-    GPIO_toggleOutputOnPin(led_2_port,led_2_pin);
+    if (0 == (i%(1<<12))){
+      temperature_update(&temperature,temperature_buffer,log_temperature_buffer_size);
+      usart_printf("\rTemperature: %10u",temperature);
+      GPIO_toggleOutputOnPin(led_1_port,led_1_pin);
+      i=0;
+    }
+    i++;
   }
   
   
 }
 
-/* #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__) */
-/* #pragma vector=ADC12_VECTOR */
-/* __interrupt */
-/* #elif defined(__GNUC__) */
-/* __attribute__((interrupt(ADC12_VECTOR))) */
-/* //__attribute__((interrupt(TIMER1_A1_VECTOR))) */
-/* #endif */
-/* void ADC12ISR(void) */
-/* { */
-/*   static uint8_t index = 0; */
+#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
+#pragma vector=ADC12_VECTOR
+__interrupt
+#elif defined(__GNUC__)
+__attribute__((interrupt(ADC12_VECTOR)))
+//__attribute__((interrupt(TIMER1_A1_VECTOR)))
+#endif
+void ADC12ISR(void)
+{
+  static uint8_t index = 0;
 
-/*   switch (ADC12IV) { */
-/*   case  ADC12IV_NONE: break;         //Vector  0:  No interrupt */
-/*   case  ADC12IV_ADC12OVIFG: break;         //Vector  2:  ADC overflow */
-/*   case  ADC12IV_ADC12TOVIFG: break;         //Vector  4:  ADC timing overflow */
-/*   case  ADC12IV_ADC12IFG0:                //Vector  6:  ADC12IFG0 */
-/*     //Move results */
-/*     temperature_buffer[index] = */
-/*       ADC12_A_getResults(ADC12_A_BASE, */
-/* 			 ADC12_A_MEMORY_0); */
+  switch (ADC12IV) {
+  case  ADC12IV_NONE: break;         //Vector  0:  No interrupt
+  case  ADC12IV_ADC12OVIFG: break;         //Vector  2:  ADC overflow
+  case  ADC12IV_ADC12TOVIFG: break;         //Vector  4:  ADC timing overflow
+  case  ADC12IV_ADC12IFG0:                //Vector  6:  ADC12IFG0
+    //Move results
+    temperature_buffer[index] =
+      ADC12_A_getResults(ADC12_A_BASE,
+			 ADC12_A_MEMORY_0);
 
-/*     //Increment results index, modulo; */
-/*     //Set Breakpoint1 here and watch results[] */
-/*     index++; */
+    //Increment results index, modulo;
+    //Set Breakpoint1 here and watch results[]
+    index++;
 
-/*     if (index == 8) */
-/*       index = 0; */
-/*   default: break; */
-/*   } */
-/* } */
+    if (index == temperature_buffer_size)
+      index = 0;
+  default: break;
+  }
+}
