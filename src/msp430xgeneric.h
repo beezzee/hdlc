@@ -8563,6 +8563,11 @@ extern "C" {
 /************************************************************
 * Timerx_A7
 ************************************************************/
+//patch to add missing defines
+#if (defined(__MSP430_HAS_T0B7__) || defined(__MSP430_HAS_T1B7__) || defined(__MSP430_HAS_T2B7__) ) 
+#define __MSP430_HAS_TxB7__
+#endif
+
 #ifdef  __MSP430_HAS_TxA7__            /* Definition to show that Module is available */
 
 #define OFS_TAxCTL            (0x0000)  /* Timerx_A7 Control */
