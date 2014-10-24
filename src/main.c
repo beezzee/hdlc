@@ -365,6 +365,10 @@ void timer_init(void) {
 
 }
 
+uint16_t timer_current_time(void) { 
+  return TIMER_B_getCounterValue(TIMER_B0_BASE);
+}
+
 void lcd_init(void) {
 
 }
@@ -400,13 +404,15 @@ void main(void)
 
   usart_init();
 
+  timer_init();
+
   memset_16((void *) temperature_buffer,0,temperature_buffer_size);
 
 
 
   //Enter LPM4, Enable interrupts
   //  __bis_SR_register(LPM4_bits + GIE);
-  // __bis_SR_register(GIE);
+   __bis_SR_register(GIE);
 
         //Enter LPM0, enable interrupts
   //     __bis_SR_register(LPM0_bits + GIE);
@@ -422,7 +428,8 @@ void main(void)
   while(1) {
     if (0 == (i%(1<<12))){
       temperature_update(&temperature,temperature_buffer,log_temperature_buffer_size);
-      usart_printf("\rTemperature: %10u",temperature);
+      usart_printf("\rTemperature: %10u C, Time: %u ms",temperature,time_out_value_ms-timer_current_time());
+      //      usart_printf("\rTemperature: %10u C",temperature);
       GPIO_toggleOutputOnPin(led_1_port,led_1_pin);
       i=0;
     }
