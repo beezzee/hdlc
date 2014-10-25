@@ -426,7 +426,7 @@ void main(void)
 
   i=0;
   while(1) {
-    if (0 == (i%(1<<12))){
+    if (0 == (i%(1<<14))){
       temperature_update(&temperature,temperature_buffer,log_temperature_buffer_size);
       usart_printf("\rTemperature: %10u C, Time: %u ms",temperature,time_out_value_ms-timer_current_time());
       //      usart_printf("\rTemperature: %10u C",temperature);
