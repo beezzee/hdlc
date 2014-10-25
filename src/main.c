@@ -118,6 +118,7 @@
 
 #define UART_PRINTF
 
+#define time_out_value_ms 10000
 
 volatile uint16_t temperature_buffer[temperature_buffer_size];
 //Needs to be global in this
@@ -343,7 +344,29 @@ void rtc_init(void) {
 }
 
 void timer_init(void) {
+ 
+        //Start timer
+        TIMER_B_clearTimerInterruptFlag(TIMER_B0_BASE);
+        TIMER_B_configureUpMode(   TIMER_B0_BASE,
+                                   TIMER_B_CLOCKSOURCE_SMCLK,
+                                   TIMER_B_CLOCKSOURCE_DIVIDER_32,
+                                   time_out_value_ms,
+                                   TIMER_B_TBIE_INTERRUPT_DISABLE,
+                                   TIMER_B_CAPTURECOMPARE_INTERRUPT_ENABLE,
+                                   TIMER_B_DO_CLEAR
+                                   );
 
+        TIMER_B_startCounter(
+                TIMER_B0_BASE,
+                TIMER_B_UP_MODE
+                );
+
+
+
+}
+
+uint16_t timer_current_time(void) { 
+  return TIMER_B_getCounterValue(TIMER_B0_BASE);
 }
 
 void lcd_init(void) {
@@ -381,16 +404,19 @@ void main(void)
 
   usart_init();
 
+  timer_init();
+
   memset_16((void *) temperature_buffer,0,temperature_buffer_size);
 
 
 
   //Enter LPM4, Enable interrupts
   //  __bis_SR_register(LPM4_bits + GIE);
-  // __bis_SR_register(GIE);
+   __bis_SR_register(GIE);
 
-
-  __enable_interrupt();
+        //Enter LPM0, enable interrupts
+  //     __bis_SR_register(LPM0_bits + GIE);
+  // __enable_interrupt();
 
   //For debugger
   __no_operation();
@@ -400,9 +426,10 @@ void main(void)
 
   i=0;
   while(1) {
-    if (0 == (i%(1<<12))){
+    if (0 == (i%(1<<14))){
       temperature_update(&temperature,temperature_buffer,log_temperature_buffer_size);
-      usart_printf("\rTemperature: %10u",temperature);
+      usart_printf("\rTemperature: %10u C, Time: %u ms",temperature,time_out_value_ms-timer_current_time());
+      //      usart_printf("\rTemperature: %10u C",temperature);
       GPIO_toggleOutputOnPin(led_1_port,led_1_pin);
       i=0;
     }
@@ -442,3 +469,18 @@ void ADC12ISR(void)
   default: break;
   }
 }
+
+
+
+#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
+#pragma vector=TIMERB0_VECTOR
+__interrupt
+#elif defined(__GNUC__)
+__attribute__((interrupt(TIMERB0_VECTOR)))
+#endif
+void TIMERB0_ISR(void)
+{
+  //currently, do nothing except stopping the timer
+  TIMER_B_stop(TIMER_B0_BASE);
+}
+
