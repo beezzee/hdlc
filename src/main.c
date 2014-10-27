@@ -111,7 +111,7 @@
 
 #define adc_port GPIO_PORT_P6
 #define adc_pin  GPIO_PIN0
-
+#define adc_reference_voltage REF_VREF2_0V
 
 #define  log_temperature_buffer_size   3
 #define  temperature_buffer_size   1 << log_temperature_buffer_size   
@@ -217,6 +217,10 @@ void adc_init(void) {
 			     ADC12_A_CYCLEHOLD_128_CYCLES,
 			     ADC12_A_MULTIPLESAMPLESENABLE);
 
+
+  REF_setReferenceVoltage(REF_BASE,adc_reference_voltage);
+  REF_enableReferenceVoltage(REF_BASE);
+    
   //Configure Memory Buffer
   /*
    * Base address of the ADC12_A Module
@@ -229,7 +233,7 @@ void adc_init(void) {
   ADC12_A_memoryConfigure(ADC12_A_BASE,
 			  ADC12_A_MEMORY_0,
 			  ADC12_A_INPUT_A0,
-			  ADC12_A_VREFPOS_AVCC,
+			  ADC12_A_VREFPOS_INT,
 			  ADC12_A_VREFNEG_AVSS,
 			  ADC12_A_NOTENDOFSEQUENCE);
 
@@ -428,7 +432,7 @@ void main(void)
   while(1) {
     if (0 == (i%(1<<14))){
       temperature_update(&temperature,temperature_buffer,log_temperature_buffer_size);
-      usart_printf("\rTemperature: %10u C, Time: %u ms",temperature,time_out_value_ms-timer_current_time());
+      usart_printf("\rTemperature: %10u C, Time: %10u ms",temperature,time_out_value_ms-timer_current_time());
       //      usart_printf("\rTemperature: %10u C",temperature);
       GPIO_toggleOutputOnPin(led_1_port,led_1_pin);
       i=0;
