@@ -111,7 +111,7 @@
 
 #define adc_port GPIO_PORT_P6
 #define adc_pin  GPIO_PIN0
-
+#define adc_reference_voltage REF_VREF2_0V
 
 #define  log_temperature_buffer_size   3
 #define  temperature_buffer_size   1 << log_temperature_buffer_size   
@@ -120,7 +120,23 @@
 
 #define time_out_value_ms 10000
 
+/**
+   0 degree celsius equals 273150E-3 degree Kelvin
+ */
+#define zero_degree_celsius_mk 273150
+
+/**
+   calibration temperature in Milli Kelvin
+ */
+#define calibration_temperature_mk 80E3 + zero_degree_celsius_mk
+
+#define temp_calibration_port GPIO_PORT_P2
+#define temp_calibration_pin GPIO_PIN1
+
 volatile uint16_t temperature_buffer[temperature_buffer_size];
+
+uint16_t temperature_slope=100;
+
 //Needs to be global in this
 //example. Otherwise, the
 //compiler removes it because it
@@ -158,6 +174,10 @@ void ports_init(void) {
 
   GPIO_setAsOutputPin(
 		      led_2_port,led_2_pin);
+
+  GPIO_setAsInputPinWithPullUpResistor(
+		     temp_calibration_port,
+		     temp_calibration_pin);
 
 	
 }
@@ -217,6 +237,10 @@ void adc_init(void) {
 			     ADC12_A_CYCLEHOLD_128_CYCLES,
 			     ADC12_A_MULTIPLESAMPLESENABLE);
 
+
+  REF_setReferenceVoltage(REF_BASE,adc_reference_voltage);
+  REF_enableReferenceVoltage(REF_BASE);
+    
   //Configure Memory Buffer
   /*
    * Base address of the ADC12_A Module
@@ -229,7 +253,7 @@ void adc_init(void) {
   ADC12_A_memoryConfigure(ADC12_A_BASE,
 			  ADC12_A_MEMORY_0,
 			  ADC12_A_INPUT_A0,
-			  ADC12_A_VREFPOS_AVCC,
+			  ADC12_A_VREFPOS_INT,
 			  ADC12_A_VREFNEG_AVSS,
 			  ADC12_A_NOTENDOFSEQUENCE);
 
@@ -392,6 +416,8 @@ void main(void)
 {
   unsigned int i;
   uint16_t temperature;
+  uint16_t voltage;
+  uint16_t voltage_at_calibration=0;
   //  stdout = &usart_out;
   //Stop Watchdog Timer
   WDT_A_hold(WDT_A_BASE);
@@ -427,11 +453,35 @@ void main(void)
   i=0;
   while(1) {
     if (0 == (i%(1<<14))){
-      temperature_update(&temperature,temperature_buffer,log_temperature_buffer_size);
-      usart_printf("\rTemperature: %10u C, Time: %u ms",temperature,time_out_value_ms-timer_current_time());
+      temperature_update(&voltage,temperature_buffer,log_temperature_buffer_size);
+      /* usart_printf("\rTemperature: %7u mK (%7i mC), Time: %10u ms", */
+      /* 		   temperature*temperature_slope, */
+      /* 		   temperature*temperature_slope-zero_degree_celsius_mk, */
+      /* 		   time_out_value_ms-timer_current_time() */
+      /* 		   ); */
+
+      temperature = ((uint32_t) (calibration_temperature_mk*voltage))/voltage_at_calibration;
+
+      usart_printf("\rTemperature: %3u.%03u K , Time: %4u.%03u s",
+      		   temperature/1000,temperature%1000,
+		   //		   (temperature-zero_degree_celsius_mk)/1000,
+		   // (temperature-zero_degree_celsius_mk)%1000,
+   		   (time_out_value_ms-timer_current_time())/1000,
+      		   (time_out_value_ms-timer_current_time())%1000
+      		   );
+
       //      usart_printf("\rTemperature: %10u C",temperature);
       GPIO_toggleOutputOnPin(led_1_port,led_1_pin);
       i=0;
+    }
+
+
+    if(GPIO_INPUT_PIN_LOW == GPIO_getInputPinValue(
+    		     temp_calibration_port,
+    		     temp_calibration_pin)) {
+      temperature_update(&voltage,temperature_buffer,log_temperature_buffer_size);
+      voltage_at_calibration = voltage;
+      printf("Temperature calibration: %u units\n",voltage_at_calibration);
     }
     i++;
   }
