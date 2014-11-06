@@ -144,6 +144,38 @@ volatile int event;
 
 uint16_t temperature_slope=100;
 
+/**
+   The size of a single flash segment
+*/
+#define flash_segment_size 128
+
+
+/**
+   Start adresses of flash segment Info A
+ */
+#define flash_info_a_addr   (0x1980)
+
+
+/**
+   Start adresses of flash segment Info B
+ */
+#define flash_info_b_addr   (0x1900)
+
+/**
+   Start adresses of flash segment Info C
+ */
+#define flash_info_c_addr   (0x1880)
+
+/**
+   Start adresses of flash segment Info D
+ */
+#define flash_info_d_addr   (0x1800)
+
+/** 
+    Adress of temperature calibration value
+*/
+#define flash_temperature_calibration_addr ((uint16_t*) flash_info_c_addr)
+
 //Needs to be global in this
 //example. Otherwise, the
 //compiler removes it because it
@@ -429,7 +461,39 @@ void temperature_update(uint16_t *tmp, volatile uint16_t *tmp_buffer, int log_bu
   
 }
 
+/**
+writing to segment A currently not supported because unlocking is
+required. Segment A contains calibration information of device and
+should not be overwritten.
+ */
+void flash_update_word(const uint16_t* addr, uint16_t value) {
+  
+  uint16_t tmp[flash_segment_size/2];
+  const unsigned int offset = ((unsigned int) addr) % flash_segment_size;
+  uint8_t *segment_start = (((uint8_t*) addr) - offset);
+  int i;
 
+  //read complete segment
+  for(i=0;i<flash_segment_size/2;i++) {
+    tmp[i]=((uint16_t*) segment_start)[i];
+  }
+
+  tmp[offset/2]=value;
+
+  do {
+    //erase segment, segment address is used by masking 
+    //offset within segment
+    FLASH_segmentErase(segment_start);
+
+  } while (FLASH_eraseCheck((uint8_t*) segment_start,flash_segment_size) == STATUS_FAIL);
+
+  //Flash Write
+  FLASH_write16(
+		tmp,
+		(uint16_t*) segment_start,
+		flash_segment_size/2
+		);
+}
 
 void main(void)
 {
@@ -437,9 +501,13 @@ void main(void)
   uint16_t temperature,time;
   uint16_t voltage;
   uint16_t voltage_at_calibration=0;
+  const uint16_t *calibration_voltage_flash_ptr = flash_temperature_calibration_addr;
+
   //  stdout = &usart_out;
   //Stop Watchdog Timer
   WDT_A_hold(WDT_A_BASE);
+
+
 
   clocks_init();
 
@@ -451,9 +519,17 @@ void main(void)
 
   timer_init();
 
+
+  printf("\n Booting..\n");
+
   memset_16((void *) temperature_buffer,0,temperature_buffer_size);
 
 
+
+  //initialize calibration voltage from flash
+  voltage_at_calibration = *calibration_voltage_flash_ptr;
+
+  printf("Loaded calibration voltage %4x\n",voltage_at_calibration);
 
   //Enter LPM4, Enable interrupts
   //  __bis_SR_register(LPM4_bits + GIE);
@@ -469,6 +545,8 @@ void main(void)
   usart_printf("Start ... \n");
 
   event = event_no_event;
+
+
 
   i=0;
   while(1) {
@@ -513,7 +591,11 @@ void main(void)
     		     temp_calibration_pin)) {
       temperature_update(&voltage,temperature_buffer,log_temperature_buffer_size);
       voltage_at_calibration = voltage;
-      printf("Temperature calibration: %u units\n",voltage_at_calibration);
+      printf("\n Temperature calibration: %4x units\n",voltage_at_calibration);
+
+      printf("Program into flash...\n");
+      flash_update_word(calibration_voltage_flash_ptr,voltage_at_calibration);
+      printf("Read from flash: %4x\n",*calibration_voltage_flash_ptr);
     }
 
     if(GPIO_INPUT_PIN_LOW == GPIO_getInputPinValue(
