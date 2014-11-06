@@ -118,7 +118,7 @@
 
 #define UART_PRINTF
 
-#define time_out_value_ms 10000
+#define time_out_value_ms 60000
 
 /**
    0 degree celsius equals 273150E-3 degree Kelvin
@@ -133,7 +133,14 @@
 #define temp_calibration_port GPIO_PORT_P2
 #define temp_calibration_pin GPIO_PIN1
 
+#define timer_start_port GPIO_PORT_P1
+#define timer_start_pin GPIO_PIN1
+
+#define event_no_event 0
+#define event_timeout_mask 1
+
 volatile uint16_t temperature_buffer[temperature_buffer_size];
+volatile int event;
 
 uint16_t temperature_slope=100;
 
@@ -370,7 +377,7 @@ void rtc_init(void) {
 void timer_init(void) {
  
         //Start timer
-        TIMER_B_clearTimerInterruptFlag(TIMER_B0_BASE);
+
         TIMER_B_configureUpMode(   TIMER_B0_BASE,
                                    TIMER_B_CLOCKSOURCE_SMCLK,
                                    TIMER_B_CLOCKSOURCE_DIVIDER_32,
@@ -380,13 +387,25 @@ void timer_init(void) {
                                    TIMER_B_DO_CLEAR
                                    );
 
-        TIMER_B_startCounter(
-                TIMER_B0_BASE,
-                TIMER_B_UP_MODE
-                );
 
 
 
+}
+
+void timer_stop() {
+  TIMER_B_stop(TIMER_B0_BASE);
+}
+
+void timer_reset() {
+    TIMER_B_clearTimerInterruptFlag(TIMER_B0_BASE);
+    TIMER_B_clear(TIMER_B0_BASE);
+}
+
+void timer_start() {
+    TIMER_B_startCounter(
+			 TIMER_B0_BASE,
+			 TIMER_B_UP_MODE
+			 );
 }
 
 uint16_t timer_current_time(void) { 
@@ -415,7 +434,7 @@ void temperature_update(uint16_t *tmp, volatile uint16_t *tmp_buffer, int log_bu
 void main(void)
 {
   unsigned int i;
-  uint16_t temperature;
+  uint16_t temperature,time;
   uint16_t voltage;
   uint16_t voltage_at_calibration=0;
   //  stdout = &usart_out;
@@ -447,12 +466,16 @@ void main(void)
   //For debugger
   __no_operation();
 
-  usart_printf("Start measurements... \n");
+  usart_printf("Start ... \n");
 
+  event = event_no_event;
 
   i=0;
   while(1) {
-    if (0 == (i%(1<<14))){
+
+    //logging task
+
+    if (0 == (i%(1<<13))){
       temperature_update(&voltage,temperature_buffer,log_temperature_buffer_size);
       /* usart_printf("\rTemperature: %7u mK (%7i mC), Time: %10u ms", */
       /* 		   temperature*temperature_slope, */
@@ -461,13 +484,14 @@ void main(void)
       /* 		   ); */
 
       temperature = ((uint32_t) (calibration_temperature_mk*voltage))/voltage_at_calibration;
-
+      time = time_out_value_ms-timer_current_time();
+      
       usart_printf("\rTemperature: %3u.%03u K , Time: %4u.%03u s",
       		   temperature/1000,temperature%1000,
 		   //		   (temperature-zero_degree_celsius_mk)/1000,
 		   // (temperature-zero_degree_celsius_mk)%1000,
-   		   (time_out_value_ms-timer_current_time())/1000,
-      		   (time_out_value_ms-timer_current_time())%1000
+   		   time/1000,
+      		   time%1000
       		   );
 
       //      usart_printf("\rTemperature: %10u C",temperature);
@@ -476,6 +500,14 @@ void main(void)
     }
 
 
+    if(event & event_timeout_mask) {
+      event &= ~event_timeout_mask;
+      usart_printf("\nTimeout detected\n");
+    }
+
+
+    //handler for BUTTON events
+
     if(GPIO_INPUT_PIN_LOW == GPIO_getInputPinValue(
     		     temp_calibration_port,
     		     temp_calibration_pin)) {
@@ -483,6 +515,19 @@ void main(void)
       voltage_at_calibration = voltage;
       printf("Temperature calibration: %u units\n",voltage_at_calibration);
     }
+
+    if(GPIO_INPUT_PIN_LOW == GPIO_getInputPinValue(
+    		     timer_start_port,
+    		     timer_start_pin)) {
+      usart_printf("\nReset and start timer at button release.\n");
+      while (GPIO_INPUT_PIN_LOW == GPIO_getInputPinValue(
+    		     timer_start_port,
+    		     timer_start_pin));
+      timer_reset();
+      timer_start();
+    }
+
+
     i++;
   }
   
@@ -530,7 +575,8 @@ __attribute__((interrupt(TIMERB0_VECTOR)))
 #endif
 void TIMERB0_ISR(void)
 {
-  //currently, do nothing except stopping the timer
-  TIMER_B_stop(TIMER_B0_BASE);
+  //currently, do nothing except stopping the timer and setting a flag
+  timer_stop();
+  event |= event_timeout_mask;
 }
 
