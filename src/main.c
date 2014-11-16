@@ -113,7 +113,7 @@
 #define adc_pin  GPIO_PIN0
 #define adc_reference_voltage REF_VREF2_0V
 
-#define  log_temperature_buffer_size   3
+#define  log_temperature_buffer_size   4
 #define  temperature_buffer_size   1 << log_temperature_buffer_size   
 
 #define UART_PRINTF
@@ -128,7 +128,7 @@
 /**
    calibration temperature in Milli Kelvin
  */
-#define calibration_temperature_mk 80E3 + zero_degree_celsius_mk
+#define calibration_temperature_mk 100E3 + zero_degree_celsius_mk
 
 #define temp_calibration_port GPIO_PORT_P2
 #define temp_calibration_pin GPIO_PIN1
