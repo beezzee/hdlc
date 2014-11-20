@@ -4,7 +4,7 @@
 #include <msp430.h>
 
 typedef struct timer_struct {
-  uint16_t time_most_significant;
+  volatile uint16_t time_most_significant;
 } timer_t;
 
 void timer_isr(timer_t * t);
