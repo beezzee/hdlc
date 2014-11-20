@@ -144,6 +144,8 @@ volatile int event;
 
 uint16_t temperature_slope=100;
 
+volatile uint16_t time_most_significant=0;
+
 /**
    The size of a single flash segment
 */
@@ -175,6 +177,18 @@ uint16_t temperature_slope=100;
     Adress of temperature calibration value
 */
 #define flash_temperature_calibration_addr ((uint16_t*) flash_info_c_addr)
+
+/**
+   The largest timestamp that we can handle
+ */
+#define TIMEOUT_MAX (1 << 32) - 1
+
+/** 
+    The time between two status updates.
+ */
+#define log_interval_ms 500
+
+#define brewing_time_ms 150 * 1000
 
 //Needs to be global in this
 //example. Otherwise, the
@@ -410,17 +424,25 @@ void timer_init(void) {
  
         //Start timer
 
-        TIMER_B_configureUpMode(   TIMER_B0_BASE,
+        /* TIMER_B_configureUpMode(   TIMER_B0_BASE, */
+        /*                            TIMER_B_CLOCKSOURCE_SMCLK, */
+        /*                            TIMER_B_CLOCKSOURCE_DIVIDER_32, */
+        /*                            time_out_value_ms, */
+        /*                            TIMER_B_TBIE_INTERRUPT_DISABLE, */
+        /*                            TIMER_B_CAPTURECOMPARE_INTERRUPT_ENABLE, */
+        /*                            TIMER_B_DO_CLEAR */
+        /*                            ); */
+  timer_stop();
+
+        TIMER_B_configureContinuousMode(   TIMER_B0_BASE,
                                    TIMER_B_CLOCKSOURCE_SMCLK,
                                    TIMER_B_CLOCKSOURCE_DIVIDER_32,
-                                   time_out_value_ms,
-                                   TIMER_B_TBIE_INTERRUPT_DISABLE,
-                                   TIMER_B_CAPTURECOMPARE_INTERRUPT_ENABLE,
-                                   TIMER_B_DO_CLEAR
+                                   TIMER_B_TBIE_INTERRUPT_ENABLE,
+                                   TIMER_B_SKIP_CLEAR
                                    );
 
 
-
+	timer_reset();
 
 }
 
@@ -431,17 +453,19 @@ void timer_stop() {
 void timer_reset() {
     TIMER_B_clearTimerInterruptFlag(TIMER_B0_BASE);
     TIMER_B_clear(TIMER_B0_BASE);
+    time_most_significant=0;
 }
 
 void timer_start() {
     TIMER_B_startCounter(
 			 TIMER_B0_BASE,
-			 TIMER_B_UP_MODE
+			 //			 TIMER_B_UP_MODE
+			 TIMER_B_CONTINUOUS_MODE
 			 );
 }
 
-uint16_t timer_current_time(void) { 
-  return TIMER_B_getCounterValue(TIMER_B0_BASE);
+uint32_t timer_current_time(void) { 
+  return (timer_most_significant << 16) || TIMER_B_getCounterValue(TIMER_B0_BASE);
 }
 
 void lcd_init(void) {
@@ -495,13 +519,29 @@ void flash_update_word(const uint16_t* addr, uint16_t value) {
 		);
 }
 
+int timeout(uint32_t to) {
+  return to<timer_current_time();
+}
+
+
 void main(void)
 {
   unsigned int i;
-  uint16_t temperature,time;
+  uint16_t temperature;
+  uint32_t time;
   uint16_t voltage;
   uint16_t voltage_at_calibration=0;
   const uint16_t *calibration_voltage_flash_ptr = flash_temperature_calibration_addr;
+
+
+
+
+#define TASK_STATUS_LOG 0
+#define TASK_START_BREW 1
+#define TASK_STOP_BREW 2
+#define TASK_CNT 2
+
+  uint32_t timeouts[TASK_CNT];
 
   //  stdout = &usart_out;
   //Stop Watchdog Timer
@@ -518,6 +558,9 @@ void main(void)
   usart_init();
 
   timer_init();
+
+
+  timer_start();
 
 
   printf("\n Booting..\n");
@@ -547,13 +590,16 @@ void main(void)
   event = event_no_event;
 
 
+  timeouts[TASK_STATUS_LOG]=1;
+  timeouts[TASK_START_BREW]=TIMEOUT_MAX;
+  timeouts[TASK_STOP_BREW]=TIMEOUT_MAX;
 
   i=0;
   while(1) {
 
     //logging task
 
-    if (0 == (i%(1<<13))){
+    if (timeout(timeouts[TASK_STATUS_LOG])){
       temperature_update(&voltage,temperature_buffer,log_temperature_buffer_size);
       /* usart_printf("\rTemperature: %7u mK (%7i mC), Time: %10u ms", */
       /* 		   temperature*temperature_slope, */
@@ -562,9 +608,9 @@ void main(void)
       /* 		   ); */
 
       temperature = ((uint32_t) (calibration_temperature_mk*voltage))/voltage_at_calibration;
-      time = time_out_value_ms-timer_current_time();
+      time = timeouts[TASK_STOP_BREW]-timer_current_time();
       
-      usart_printf("\rTemperature: %3u.%03u K , Time: %4u.%03u s",
+      usart_printf("\rTemperature: %3u.%03u K , Time: %7u.%03u s",
       		   temperature/1000,temperature%1000,
 		   //		   (temperature-zero_degree_celsius_mk)/1000,
 		   // (temperature-zero_degree_celsius_mk)%1000,
@@ -574,13 +620,13 @@ void main(void)
 
       //      usart_printf("\rTemperature: %10u C",temperature);
       GPIO_toggleOutputOnPin(led_1_port,led_1_pin);
-      i=0;
+      timeouts[TASK_STATUS_LOG]=timer_current_time()+log_interval_ms;
     }
 
 
-    if(event & event_timeout_mask) {
-      event &= ~event_timeout_mask;
+    if(timeout(timeouts[TASK_STOP_BREW])) {
       usart_printf("\nTimeout detected\n");
+      timeouts[TASK_STOP_BREW]=TIMEOUT_MAX;
     }
 
 
@@ -605,8 +651,7 @@ void main(void)
       while (GPIO_INPUT_PIN_LOW == GPIO_getInputPinValue(
     		     timer_start_port,
     		     timer_start_pin));
-      timer_reset();
-      timer_start();
+      timeouts[TASK_STOP_BREW]=timer_current_time() + brewing_time_ms;
     }
 
 
@@ -657,8 +702,7 @@ __attribute__((interrupt(TIMERB0_VECTOR)))
 #endif
 void TIMERB0_ISR(void)
 {
-  //currently, do nothing except stopping the timer and setting a flag
-  timer_stop();
-  event |= event_timeout_mask;
+  //increase most significant bytes of time
+  time_most_significant++;
 }
 
