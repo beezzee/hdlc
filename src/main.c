@@ -181,7 +181,7 @@ volatile uint16_t time_most_significant=0;
 /**
    The largest timestamp that we can handle
  */
-#define TIMEOUT_MAX (1 << 32) - 1
+#define TIMEOUT_MAX 0xffffffff
 
 /** 
     The time between two status updates.
@@ -426,6 +426,9 @@ void timer_reset() {
     time_most_significant=0;
 }
 
+void timer_stop() {
+  TIMER_B_stop(TIMER_B0_BASE);
+}
 
 void timer_init(void) {
  
@@ -453,9 +456,6 @@ void timer_init(void) {
 
 }
 
-void timer_stop() {
-  TIMER_B_stop(TIMER_B0_BASE);
-}
 
 
 void timer_start() {
@@ -467,7 +467,11 @@ void timer_start() {
 }
 
 uint32_t timer_current_time(void) { 
-  return (timer_most_significant << 16) || TIMER_B_getCounterValue(TIMER_B0_BASE);
+  uint32_t result;
+  result = time_most_significant;
+  result = result << 16;
+  result |= TIMER_B_getCounterValue(TIMER_B0_BASE);
+  return result;
 }
 
 void lcd_init(void) {
@@ -622,7 +626,7 @@ void main(void)
 
       //      usart_printf("\rTemperature: %10u C",temperature);
       GPIO_toggleOutputOnPin(led_1_port,led_1_pin);
-      timeouts[TASK_STATUS_LOG]=timer_current_time()+log_interval_ms;
+      timeouts[TASK_STATUS_LOG]=timer_current_time();
     }
 
 
