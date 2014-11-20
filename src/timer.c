@@ -9,9 +9,9 @@ void timer_isr(timer_t* t) {
 }
 
 void timer_reset(timer_t* t) {
-    TIMER_B_clearTimerInterruptFlag(TIMER_B0_BASE);
-    TIMER_B_clear(TIMER_B0_BASE);
-    t->time_most_significant=0;
+  TIMER_B_clearTimerInterruptFlag(TIMER_B0_BASE);
+  TIMER_B_clear(TIMER_B0_BASE);
+  t->time_most_significant=0;
 }
 
 void timer_stop(timer_t* t) {
@@ -20,38 +20,38 @@ void timer_stop(timer_t* t) {
 
 void timer_init(timer_t* t) {
  
-        //Start timer
+  //Start timer
 
-        /* TIMER_B_configureUpMode(   TIMER_B0_BASE, */
-        /*                            TIMER_B_CLOCKSOURCE_SMCLK, */
-        /*                            TIMER_B_CLOCKSOURCE_DIVIDER_32, */
-        /*                            time_out_value_ms, */
-        /*                            TIMER_B_TBIE_INTERRUPT_DISABLE, */
-        /*                            TIMER_B_CAPTURECOMPARE_INTERRUPT_ENABLE, */
-        /*                            TIMER_B_DO_CLEAR */
-        /*                            ); */
+  /* TIMER_B_configureUpMode(   TIMER_B0_BASE, */
+  /*                            TIMER_B_CLOCKSOURCE_SMCLK, */
+  /*                            TIMER_B_CLOCKSOURCE_DIVIDER_32, */
+  /*                            time_out_value_ms, */
+  /*                            TIMER_B_TBIE_INTERRUPT_DISABLE, */
+  /*                            TIMER_B_CAPTURECOMPARE_INTERRUPT_ENABLE, */
+  /*                            TIMER_B_DO_CLEAR */
+  /*                            ); */
   timer_stop(t);
 
-        TIMER_B_configureContinuousMode(   TIMER_B0_BASE,
-                                   TIMER_B_CLOCKSOURCE_SMCLK,
-                                   TIMER_B_CLOCKSOURCE_DIVIDER_32,
-                                   TIMER_B_TBIE_INTERRUPT_ENABLE,
-                                   TIMER_B_SKIP_CLEAR
-                                   );
+  TIMER_B_configureContinuousMode(   TIMER_B0_BASE,
+				     TIMER_B_CLOCKSOURCE_SMCLK,
+				     TIMER_B_CLOCKSOURCE_DIVIDER_32,
+				     TIMER_B_TBIE_INTERRUPT_ENABLE,
+				     TIMER_B_SKIP_CLEAR
+				     );
 
 
-	timer_reset(t);
+  timer_reset(t);
 
 }
 
 
 
 void timer_start(timer_t* t) {
-    TIMER_B_startCounter(
-			 TIMER_B0_BASE,
-			 //			 TIMER_B_UP_MODE
-			 TIMER_B_CONTINUOUS_MODE
-			 );
+  TIMER_B_startCounter(
+		       TIMER_B0_BASE,
+		       //			 TIMER_B_UP_MODE
+		       TIMER_B_CONTINUOUS_MODE
+		       );
 }
 
 uint32_t timer_current_time(timer_t* t) { 
