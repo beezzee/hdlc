@@ -420,6 +420,13 @@ void rtc_init(void) {
 
 }
 
+void timer_reset() {
+    TIMER_B_clearTimerInterruptFlag(TIMER_B0_BASE);
+    TIMER_B_clear(TIMER_B0_BASE);
+    time_most_significant=0;
+}
+
+
 void timer_init(void) {
  
         //Start timer
@@ -450,11 +457,6 @@ void timer_stop() {
   TIMER_B_stop(TIMER_B0_BASE);
 }
 
-void timer_reset() {
-    TIMER_B_clearTimerInterruptFlag(TIMER_B0_BASE);
-    TIMER_B_clear(TIMER_B0_BASE);
-    time_most_significant=0;
-}
 
 void timer_start() {
     TIMER_B_startCounter(
