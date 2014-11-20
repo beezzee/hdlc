@@ -72,6 +72,8 @@
 
 #include "driverlib.h"
 
+#include "timer.h"
+
 #define motor_down_pin GPIO_PIN1
 #define motor_up_pin GPIO_PIN2
 #define motor_port GPIO_PORT_P1
@@ -144,7 +146,8 @@ volatile int event;
 
 uint16_t temperature_slope=100;
 
-volatile uint16_t time_most_significant=0;
+timer_t timer;
+
 
 /**
    The size of a single flash segment
@@ -420,59 +423,6 @@ void rtc_init(void) {
 
 }
 
-void timer_reset() {
-    TIMER_B_clearTimerInterruptFlag(TIMER_B0_BASE);
-    TIMER_B_clear(TIMER_B0_BASE);
-    time_most_significant=0;
-}
-
-void timer_stop() {
-  TIMER_B_stop(TIMER_B0_BASE);
-}
-
-void timer_init(void) {
- 
-        //Start timer
-
-        /* TIMER_B_configureUpMode(   TIMER_B0_BASE, */
-        /*                            TIMER_B_CLOCKSOURCE_SMCLK, */
-        /*                            TIMER_B_CLOCKSOURCE_DIVIDER_32, */
-        /*                            time_out_value_ms, */
-        /*                            TIMER_B_TBIE_INTERRUPT_DISABLE, */
-        /*                            TIMER_B_CAPTURECOMPARE_INTERRUPT_ENABLE, */
-        /*                            TIMER_B_DO_CLEAR */
-        /*                            ); */
-  timer_stop();
-
-        TIMER_B_configureContinuousMode(   TIMER_B0_BASE,
-                                   TIMER_B_CLOCKSOURCE_SMCLK,
-                                   TIMER_B_CLOCKSOURCE_DIVIDER_32,
-                                   TIMER_B_TBIE_INTERRUPT_ENABLE,
-                                   TIMER_B_SKIP_CLEAR
-                                   );
-
-
-	timer_reset();
-
-}
-
-
-
-void timer_start() {
-    TIMER_B_startCounter(
-			 TIMER_B0_BASE,
-			 //			 TIMER_B_UP_MODE
-			 TIMER_B_CONTINUOUS_MODE
-			 );
-}
-
-uint32_t timer_current_time(void) { 
-  uint32_t result;
-  result = time_most_significant;
-  result = result << 16;
-  result |= TIMER_B_getCounterValue(TIMER_B0_BASE);
-  return result;
-}
 
 void lcd_init(void) {
 
@@ -525,9 +475,6 @@ void flash_update_word(const uint16_t* addr, uint16_t value) {
 		);
 }
 
-int timeout(uint32_t to) {
-  return to<timer_current_time();
-}
 
 
 void main(void)
@@ -563,10 +510,11 @@ void main(void)
 
   usart_init();
 
-  timer_init();
+
+  timer_init(&timer);
 
 
-  timer_start();
+  timer_start(&timer);
 
 
   printf("\n Booting..\n");
@@ -605,7 +553,7 @@ void main(void)
 
     //logging task
 
-    if (timeout(timeouts[TASK_STATUS_LOG])){
+    if (timer_timeout(&timer,timeouts[TASK_STATUS_LOG])){
       temperature_update(&voltage,temperature_buffer,log_temperature_buffer_size);
       /* usart_printf("\rTemperature: %7u mK (%7i mC), Time: %10u ms", */
       /* 		   temperature*temperature_slope, */
@@ -614,7 +562,7 @@ void main(void)
       /* 		   ); */
 
       temperature = ((uint32_t) (calibration_temperature_mk*voltage))/voltage_at_calibration;
-      time = timeouts[TASK_STOP_BREW]-timer_current_time();
+      time = timeouts[TASK_STOP_BREW]-timer_current_time(&timer);
       
       usart_printf("\rTemperature: %3u.%03u K , Time: %7u.%03u s",
       		   temperature/1000,temperature%1000,
@@ -626,11 +574,11 @@ void main(void)
 
       //      usart_printf("\rTemperature: %10u C",temperature);
       GPIO_toggleOutputOnPin(led_1_port,led_1_pin);
-      timeouts[TASK_STATUS_LOG]=timer_current_time();
+      timeouts[TASK_STATUS_LOG]=timer_current_time(&timer)+log_interval_ms;
     }
 
 
-    if(timeout(timeouts[TASK_STOP_BREW])) {
+    if(timer_timeout(&timer,timeouts[TASK_STOP_BREW])) {
       usart_printf("\nTimeout detected\n");
       timeouts[TASK_STOP_BREW]=TIMEOUT_MAX;
     }
@@ -657,7 +605,7 @@ void main(void)
       while (GPIO_INPUT_PIN_LOW == GPIO_getInputPinValue(
     		     timer_start_port,
     		     timer_start_pin));
-      timeouts[TASK_STOP_BREW]=timer_current_time() + brewing_time_ms;
+      timeouts[TASK_STOP_BREW]=timer_current_time(&timer) + brewing_time_ms;
     }
 
 
@@ -708,7 +656,6 @@ __attribute__((interrupt(TIMERB0_VECTOR)))
 #endif
 void TIMERB0_ISR(void)
 {
-  //increase most significant bytes of time
-  time_most_significant++;
+  timer_isr(&timer);
 }
 
