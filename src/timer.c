@@ -6,6 +6,7 @@
 void timer_isr(timer_t* t) {
   //increase most significant bytes of time
   t->time_most_significant++;
+  TIMER_B_clearTimerInterruptFlag(TIMER_B0_BASE);
 }
 
 void timer_reset(timer_t* t) {
@@ -36,7 +37,7 @@ void timer_init(timer_t* t) {
 				     TIMER_B_CLOCKSOURCE_SMCLK,
 				     TIMER_B_CLOCKSOURCE_DIVIDER_32,
 				     TIMER_B_TBIE_INTERRUPT_ENABLE,
-				     TIMER_B_SKIP_CLEAR
+				     TIMER_B_DO_CLEAR
 				     );
 
 
@@ -56,7 +57,7 @@ void timer_start(timer_t* t) {
 
 uint32_t timer_current_time(timer_t* t) { 
   uint32_t result;
-  result = t->time_most_significant;
+  result = (uint32_t) t->time_most_significant;
   result = result << 16;
   result |= TIMER_B_getCounterValue(TIMER_B0_BASE);
   return result;

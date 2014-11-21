@@ -189,9 +189,9 @@ timer_t timer;
 /** 
     The time between two status updates.
  */
-#define log_interval_ms 500
+#define log_interval_ms 3000
 
-#define brewing_time_ms 150 * 1000
+#define brewing_time_ms 150000
 
 //Needs to be global in this
 //example. Otherwise, the
@@ -485,14 +485,14 @@ void main(void)
   uint16_t voltage;
   uint16_t voltage_at_calibration=0;
   const uint16_t *calibration_voltage_flash_ptr = flash_temperature_calibration_addr;
-
+  int brewing = 0;
 
 
 
 #define TASK_STATUS_LOG 0
 #define TASK_START_BREW 1
 #define TASK_STOP_BREW 2
-#define TASK_CNT 2
+#define TASK_CNT 3
 
   uint32_t timeouts[TASK_CNT];
 
@@ -562,25 +562,30 @@ void main(void)
       /* 		   ); */
 
       temperature = ((uint32_t) (calibration_temperature_mk*voltage))/voltage_at_calibration;
-      time = timeouts[TASK_STOP_BREW]-timer_current_time(&timer);
-      
-      usart_printf("\rTemperature: %3u.%03u K , Time: %7u.%03u s",
+      if(brewing) {
+	time = timeouts[TASK_STOP_BREW]-timer_current_time(&timer);
+      } else {
+	time =   brewing_time_ms;
+      }
+      usart_printf("\rTemperature: %3u.%03u K , Time: %7lu.%03u s",
       		   temperature/1000,temperature%1000,
 		   //		   (temperature-zero_degree_celsius_mk)/1000,
 		   // (temperature-zero_degree_celsius_mk)%1000,
    		   time/1000,
       		   time%1000
       		   );
-
+      //      time = timer_current_time(&timer);
+      // usart_printf("\n %lu\n",time);
       //      usart_printf("\rTemperature: %10u C",temperature);
       GPIO_toggleOutputOnPin(led_1_port,led_1_pin);
-      timeouts[TASK_STATUS_LOG]=timer_current_time(&timer)+log_interval_ms;
+      timeouts[TASK_STATUS_LOG]+=log_interval_ms;
     }
 
 
     if(timer_timeout(&timer,timeouts[TASK_STOP_BREW])) {
       usart_printf("\nTimeout detected\n");
       timeouts[TASK_STOP_BREW]=TIMEOUT_MAX;
+      brewing = 0;
     }
 
 
@@ -605,7 +610,8 @@ void main(void)
       while (GPIO_INPUT_PIN_LOW == GPIO_getInputPinValue(
     		     timer_start_port,
     		     timer_start_pin));
-      timeouts[TASK_STOP_BREW]=timer_current_time(&timer) + brewing_time_ms;
+      timeouts[TASK_STOP_BREW]= (timer_current_time(&timer) + brewing_time_ms);
+      brewing = 1;
     }
 
 
@@ -652,7 +658,7 @@ void ADC12ISR(void)
 #pragma vector=TIMERB0_VECTOR
 __interrupt
 #elif defined(__GNUC__)
-__attribute__((interrupt(TIMERB0_VECTOR)))
+__attribute__((interrupt(TIMERB1_VECTOR)))
 #endif
 void TIMERB0_ISR(void)
 {
