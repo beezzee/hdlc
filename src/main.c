@@ -115,7 +115,7 @@
 #define adc_pin  GPIO_PIN0
 #define adc_reference_voltage REF_VREF2_0V
 
-#define  log_temperature_buffer_size   4
+#define  log_temperature_buffer_size   3
 #define  temperature_buffer_size   1 << log_temperature_buffer_size   
 
 #define UART_PRINTF
@@ -123,14 +123,15 @@
 #define time_out_value_ms 60000
 
 /**
-   0 degree celsius equals 273150E-3 degree Kelvin
+   0 degree celsius equals 27315E-2 degree Kelvin
  */
-#define zero_degree_celsius_mk 273150
+#define zero_degree_celsius 27315
 
 /**
    calibration temperature in Milli Kelvin
  */
-#define calibration_temperature_mk 100E3 + zero_degree_celsius_mk
+//#define calibration_temperature_mk 100E3 + zero_degree_celsius_mk
+#define calibration_temperature 2030 + zero_degree_celsius
 
 #define temp_calibration_port GPIO_PORT_P2
 #define temp_calibration_pin GPIO_PIN1
@@ -189,7 +190,7 @@ timer_t timer;
 /** 
     The time between two status updates.
  */
-#define log_interval_ms 3000
+#define log_interval_ms 500
 
 #define brewing_time_ms 150000
 
@@ -274,10 +275,10 @@ void adc_init(void) {
    */
   ADC12_A_init(ADC12_A_BASE,
 	       ADC12_A_SAMPLEHOLDSOURCE_SC,
-	       //ADC12_A_CLOCKSOURCE_ADC12OSC,
+	       //	       ADC12_A_CLOCKSOURCE_ADC12OSC,
 	       ADC12_A_CLOCKSOURCE_SMCLK,
-	       //ADC12_A_CLOCKDIVIDER_1
-	       ADC12_A_CLOCKDIVIDER_32
+	       ADC12_A_CLOCKDIVIDER_8
+	       //ADC12_A_CLOCKDIVIDER_32
 	       );
 
   ADC12_A_enable(ADC12_A_BASE);
@@ -289,8 +290,8 @@ void adc_init(void) {
    * Enable Multiple Sampling
    */
   ADC12_A_setupSamplingTimer(ADC12_A_BASE,
-			     ADC12_A_CYCLEHOLD_128_CYCLES,
-			     ADC12_A_CYCLEHOLD_128_CYCLES,
+			     ADC12_A_CYCLEHOLD_4_CYCLES,
+			     ADC12_A_CYCLEHOLD_4_CYCLES,
 			     ADC12_A_MULTIPLESAMPLESENABLE);
 
 
@@ -480,7 +481,7 @@ void flash_update_word(const uint16_t* addr, uint16_t value) {
 void main(void)
 {
   unsigned int i;
-  uint16_t temperature;
+  uint32_t temperature;
   uint32_t time;
   uint16_t voltage;
   uint16_t voltage_at_calibration=0;
@@ -561,14 +562,15 @@ void main(void)
       /* 		   time_out_value_ms-timer_current_time() */
       /* 		   ); */
 
-      temperature = ((uint32_t) (calibration_temperature_mk*voltage))/voltage_at_calibration;
+      temperature = (((uint32_t) calibration_temperature)*((uint32_t) voltage));
+      temperature/=voltage_at_calibration;
       if(brewing) {
 	time = timeouts[TASK_STOP_BREW]-timer_current_time(&timer);
       } else {
 	time =   brewing_time_ms;
       }
-      usart_printf("\rTemperature: %3u.%03u K , Time: %7lu.%03u s",
-      		   temperature/1000,temperature%1000,
+      usart_printf("\rTemperature: %3lu.%02lu K , Time: %7lu.%03lu s",
+      		   temperature/100,temperature%100,
 		   //		   (temperature-zero_degree_celsius_mk)/1000,
 		   // (temperature-zero_degree_celsius_mk)%1000,
    		   time/1000,
@@ -650,6 +652,9 @@ void ADC12ISR(void)
       index = 0;
   default: break;
   }
+  ADC12_A_clearInterrupt(ADC12_A_BASE,
+			 ADC12IFG0);
+
 }
 
 
