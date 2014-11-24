@@ -190,7 +190,7 @@ timer_t timer;
 /** 
     The time between two status updates.
  */
-#define log_interval_ms 3000
+#define log_interval_ms 500
 
 #define brewing_time_ms 150000
 
@@ -275,10 +275,10 @@ void adc_init(void) {
    */
   ADC12_A_init(ADC12_A_BASE,
 	       ADC12_A_SAMPLEHOLDSOURCE_SC,
-	       //ADC12_A_CLOCKSOURCE_ADC12OSC,
+	       //	       ADC12_A_CLOCKSOURCE_ADC12OSC,
 	       ADC12_A_CLOCKSOURCE_SMCLK,
-	       //ADC12_A_CLOCKDIVIDER_1
-	       ADC12_A_CLOCKDIVIDER_32
+	       ADC12_A_CLOCKDIVIDER_8
+	       //ADC12_A_CLOCKDIVIDER_32
 	       );
 
   ADC12_A_enable(ADC12_A_BASE);
@@ -290,8 +290,8 @@ void adc_init(void) {
    * Enable Multiple Sampling
    */
   ADC12_A_setupSamplingTimer(ADC12_A_BASE,
-			     ADC12_A_CYCLEHOLD_128_CYCLES,
-			     ADC12_A_CYCLEHOLD_128_CYCLES,
+			     ADC12_A_CYCLEHOLD_4_CYCLES,
+			     ADC12_A_CYCLEHOLD_4_CYCLES,
 			     ADC12_A_MULTIPLESAMPLESENABLE);
 
 
