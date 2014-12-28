@@ -96,16 +96,20 @@
 #define usart_mod_reg_2  3
 #define usart_oversampling USCI_A_UART_LOW_FREQUENCY_BAUDRATE_GENERATION 
 
-#define usart_base USCI_A1_BASE
+#define log_usart_base USCI_A1_BASE
 
-#define clock_source_master UCS_XT2CLK_SELECT
-#define clock_divider_master UCS_CLOCK_DIVIDER_1
-#define clock_source_master_external 0
+#define clock_source_mclk UCS_DCOCLK_SELECT //UCS_XT2CLK_SELECT
+#define clock_divider_mclk UCS_CLOCK_DIVIDER_1
 
-#define clock_source_subsystem UCS_XT1CLK_SELECT
-#define clock_divider_subsystem UCS_CLOCK_DIVIDER_1
+#define clock_source_smclk UCS_XT1CLK_SELECT
+#define clock_divider_smclk UCS_CLOCK_DIVIDER_1
 
-#define xt1_freq 32000
+#define clock_source_amclk UCS_XT1CLK_SELECT
+#define clock_divider_amclk UCS_CLOCK_DIVIDER_1
+
+
+
+#define xt1_freq UCS_REFOCLK_FREQUENCY 
 #define xt2_freq 40000000
 //#define xt2_drive_strength UCS_XT2DRIVE_4MHZ_8MH
 #define xt2_drive_strength UCS_XT2DRIVE_24MHZ_32MHZ
@@ -240,22 +244,33 @@ void ports_init(void) {
 }
 
 void clocks_init(void) {
-  UCS_clockSignalInit(UCS_SMCLK,clock_source_subsystem,clock_divider_subsystem);
+  if(
+     (UCS_XT2CLK_SELECT == clock_source_smclk ) ||
+     (UCS_XT2CLK_SELECT == clock_source_amclk ) ||
+     (UCS_XT2CLK_SELECT == clock_source_mclk ) 
+     ) 
+    {
+      UCS_XT2Start(xt2_drive_strength);
+    };
+
+  UCS_clockSignalInit(UCS_SMCLK,clock_source_smclk,clock_divider_smclk);
+  UCS_clockSignalInit(UCS_MCLK,clock_source_mclk,clock_divider_mclk);
+  UCS_clockSignalInit(UCS_ACLK,clock_source_amclk,clock_divider_amclk);
 
   UCS_setExternalClockSource(xt1_freq,xt2_freq);
 
 
-  if (clock_source_master_external) {
-    UCS_XT2Start(xt2_drive_strength);
+  /* if (clock_source_master_external) { */
+    
   
 
 
-    if (UCS_faultFlagStatus(UCS_XT2OFFG)){
-      printf("Failed to enable XT2. Stay at internal clock.\n");
-    } else {
-      UCS_clockSignalInit(UCS_MCLK,clock_source_master,clock_divider_master);
-    }
-  }
+  /*   if (UCS_faultFlagStatus(UCS_XT2OFFG)){ */
+  /*     printf("Failed to enable XT2. Stay at internal clock.\n"); */
+  /*   } else { */
+  /*     UCS_clockSignalInit(UCS_MCLK,clock_source_master,clock_divider_master); */
+  /*   } */
+  /* } */
 }
 
 void adc_init(void) {
