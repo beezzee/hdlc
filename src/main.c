@@ -340,7 +340,7 @@ void usart_init(void) {
 					     );
 
   if ( STATUS_FAIL 
-       == USCI_A_UART_initAdvance(usart_base,
+       == USCI_A_UART_initAdvance(log_usart_base,
 				  USCI_A_UART_CLOCKSOURCE_SMCLK,
 				  usart_clock_prescale,
 				  usart_mod_reg_1,
@@ -354,12 +354,12 @@ void usart_init(void) {
   }
 
   //Enable UART module for operation
-  USCI_A_UART_enable(usart_base);
+  USCI_A_UART_enable(log_usart_base);
 
   //Enable Receive Interrupt
-  USCI_A_UART_clearInterruptFlag(usart_base,
+  USCI_A_UART_clearInterruptFlag(log_usart_base,
 				 USCI_A_UART_RECEIVE_INTERRUPT);
-  //  USCI_A_UART_enableInterrupt(usart_base,
+  //  USCI_A_UART_enableInterrupt(log_usart_base,
   //			      USCI_A_UART_RECEIVE_INTERRUPT);
 
 
@@ -384,7 +384,7 @@ void usart_init(void) {
 
 /*   fflush(stdout); */
 				 
-/*   while(USCI_A_UART_queryStatusFlags 	(usart_base,USCI_A_UART_BUSY )); */
+/*   while(USCI_A_UART_queryStatusFlags 	(log_usart_base,USCI_A_UART_BUSY )); */
 				 
 		
 /* } */
@@ -405,10 +405,10 @@ void usart_init(void) {
 
 int putchar(int s)
 {
-  USCI_A_UART_transmitData(usart_base,
+  USCI_A_UART_transmitData(log_usart_base,
 			   (char) s);
 
-  while(!USCI_A_UART_getInterruptStatus(usart_base, 
+  while(!USCI_A_UART_getInterruptStatus(log_usart_base, 
 					USCI_A_UART_TRANSMIT_INTERRUPT_FLAG )
 	); 
 
