@@ -98,7 +98,8 @@
 
 #define log_usart_base USCI_A1_BASE
 
-#define clock_source_mclk UCS_DCOCLK_SELECT //UCS_XT2CLK_SELECT
+//#define clock_source_mclk UCS_DCOCLK_SELECT 
+#define clock_source_mclk UCS_XT2CLK_SELECT
 #define clock_divider_mclk UCS_CLOCK_DIVIDER_1
 
 #define clock_source_smclk UCS_XT1CLK_SELECT
@@ -111,8 +112,8 @@
 
 #define xt1_freq UCS_REFOCLK_FREQUENCY 
 #define xt2_freq 40000000
-//#define xt2_drive_strength UCS_XT2DRIVE_4MHZ_8MH
-#define xt2_drive_strength UCS_XT2DRIVE_24MHZ_32MHZ
+#define xt2_drive_strength UCS_XT2DRIVE_4MHZ_8MHZ
+//#define xt2_drive_strength UCS_XT2DRIVE_24MHZ_32MHZ
 
 
 #define adc_port GPIO_PORT_P6
@@ -244,12 +245,19 @@ void ports_init(void) {
 }
 
 void clocks_init(void) {
+
   if(
      (UCS_XT2CLK_SELECT == clock_source_smclk ) ||
      (UCS_XT2CLK_SELECT == clock_source_amclk ) ||
      (UCS_XT2CLK_SELECT == clock_source_mclk ) 
      ) 
     {
+      /*
+	configure XT2 pins for special function
+      */
+      GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P5,GPIO_PIN2);
+      GPIO_setAsPeripheralModuleFunctionOutputPin(GPIO_PORT_P5,GPIO_PIN3);
+
       UCS_XT2Start(xt2_drive_strength);
     };
 
