@@ -88,27 +88,44 @@
 #define usart_rx_pin GPIO_PIN5 
 #define usart_tx_pin GPIO_PIN4
 
+#define xt2_port GPIO_PORT_P5
+#define xt2_input_pin GPIO_PIN2
+#define xt2_output_pin GPIO_PIN3
 
 //from http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSP430BaudRateConverter/index.html
-//9.6 kbaud
+//9.6 kbaud @ 32.768 kHz
+/*
 #define usart_clock_prescale   3
 #define usart_mod_reg_1  0
 #define usart_mod_reg_2  3
 #define usart_oversampling USCI_A_UART_LOW_FREQUENCY_BAUDRATE_GENERATION 
+*/
 
-#define usart_base USCI_A1_BASE
+//9.6 kbaud @ 4 MHz
+#define usart_clock_prescale   26
+#define usart_mod_reg_1  1
+#define usart_mod_reg_2  0
+#define usart_oversampling USCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION 
 
-#define clock_source_master UCS_XT2CLK_SELECT
-#define clock_divider_master UCS_CLOCK_DIVIDER_1
-#define clock_source_master_external 0
 
-#define clock_source_subsystem UCS_XT1CLK_SELECT
-#define clock_divider_subsystem UCS_CLOCK_DIVIDER_1
+#define log_usart_base USCI_A1_BASE
 
-#define xt1_freq 32000
+#define clock_source_mclk UCS_DCOCLK_SELECT 
+//#define clock_source_mclk UCS_XT2CLK_SELECT
+#define clock_divider_mclk UCS_CLOCK_DIVIDER_1
+
+#define clock_source_smclk UCS_XT2CLK_SELECT
+#define clock_divider_smclk UCS_CLOCK_DIVIDER_1
+
+#define clock_source_amclk UCS_XT1CLK_SELECT
+#define clock_divider_amclk UCS_CLOCK_DIVIDER_1
+
+
+
+#define xt1_freq UCS_REFOCLK_FREQUENCY 
 #define xt2_freq 40000000
-//#define xt2_drive_strength UCS_XT2DRIVE_4MHZ_8MH
-#define xt2_drive_strength UCS_XT2DRIVE_24MHZ_32MHZ
+#define xt2_drive_strength UCS_XT2DRIVE_4MHZ_8MHZ
+//#define xt2_drive_strength UCS_XT2DRIVE_24MHZ_32MHZ
 
 
 #define adc_port GPIO_PORT_P6
@@ -120,7 +137,7 @@
 
 #define UART_PRINTF
 
-#define time_out_value_ms 60000
+//#define time_out_value_ms 60000
 
 /**
    0 degree celsius equals 27315E-2 degree Kelvin
@@ -190,9 +207,9 @@ timer_t timer;
 /** 
     The time between two status updates.
  */
-#define log_interval_ms 500
+#define log_interval   500
 
-#define brewing_time_ms 150000
+#define brewing_time_s 150
 
 //Needs to be global in this
 //example. Otherwise, the
@@ -240,22 +257,40 @@ void ports_init(void) {
 }
 
 void clocks_init(void) {
-  UCS_clockSignalInit(UCS_SMCLK,clock_source_subsystem,clock_divider_subsystem);
+
+  if(
+     (UCS_XT2CLK_SELECT == clock_source_smclk ) ||
+     (UCS_XT2CLK_SELECT == clock_source_amclk ) ||
+     (UCS_XT2CLK_SELECT == clock_source_mclk ) 
+     ) 
+    {
+      /*
+	configure XT2 pins for special function
+      */
+      GPIO_setAsPeripheralModuleFunctionInputPin(xt2_port,xt2_input_pin);
+      GPIO_setAsPeripheralModuleFunctionOutputPin(xt2_port,xt2_output_pin);
+
+      UCS_XT2Start(xt2_drive_strength);
+    };
+
+  UCS_clockSignalInit(UCS_SMCLK,clock_source_smclk,clock_divider_smclk);
+  UCS_clockSignalInit(UCS_MCLK,clock_source_mclk,clock_divider_mclk);
+  UCS_clockSignalInit(UCS_ACLK,clock_source_amclk,clock_divider_amclk);
 
   UCS_setExternalClockSource(xt1_freq,xt2_freq);
 
 
-  if (clock_source_master_external) {
-    UCS_XT2Start(xt2_drive_strength);
+  /* if (clock_source_master_external) { */
+    
   
 
 
-    if (UCS_faultFlagStatus(UCS_XT2OFFG)){
-      printf("Failed to enable XT2. Stay at internal clock.\n");
-    } else {
-      UCS_clockSignalInit(UCS_MCLK,clock_source_master,clock_divider_master);
-    }
-  }
+  /*   if (UCS_faultFlagStatus(UCS_XT2OFFG)){ */
+  /*     printf("Failed to enable XT2. Stay at internal clock.\n"); */
+  /*   } else { */
+  /*     UCS_clockSignalInit(UCS_MCLK,clock_source_master,clock_divider_master); */
+  /*   } */
+  /* } */
 }
 
 void adc_init(void) {
@@ -276,7 +311,8 @@ void adc_init(void) {
   ADC12_A_init(ADC12_A_BASE,
 	       ADC12_A_SAMPLEHOLDSOURCE_SC,
 	       //	       ADC12_A_CLOCKSOURCE_ADC12OSC,
-	       ADC12_A_CLOCKSOURCE_SMCLK,
+	       ADC12_A_CLOCKSOURCE_ACLK,
+	       //ADC12_A_CLOCKSOURCE_SMCLK,
 	       ADC12_A_CLOCKDIVIDER_8
 	       //ADC12_A_CLOCKDIVIDER_32
 	       );
@@ -340,7 +376,7 @@ void usart_init(void) {
 					     );
 
   if ( STATUS_FAIL 
-       == USCI_A_UART_initAdvance(usart_base,
+       == USCI_A_UART_initAdvance(log_usart_base,
 				  USCI_A_UART_CLOCKSOURCE_SMCLK,
 				  usart_clock_prescale,
 				  usart_mod_reg_1,
@@ -354,12 +390,12 @@ void usart_init(void) {
   }
 
   //Enable UART module for operation
-  USCI_A_UART_enable(usart_base);
+  USCI_A_UART_enable(log_usart_base);
 
   //Enable Receive Interrupt
-  USCI_A_UART_clearInterruptFlag(usart_base,
+  USCI_A_UART_clearInterruptFlag(log_usart_base,
 				 USCI_A_UART_RECEIVE_INTERRUPT);
-  //  USCI_A_UART_enableInterrupt(usart_base,
+  //  USCI_A_UART_enableInterrupt(log_usart_base,
   //			      USCI_A_UART_RECEIVE_INTERRUPT);
 
 
@@ -384,7 +420,7 @@ void usart_init(void) {
 
 /*   fflush(stdout); */
 				 
-/*   while(USCI_A_UART_queryStatusFlags 	(usart_base,USCI_A_UART_BUSY )); */
+/*   while(USCI_A_UART_queryStatusFlags 	(log_usart_base,USCI_A_UART_BUSY )); */
 				 
 		
 /* } */
@@ -405,10 +441,10 @@ void usart_init(void) {
 
 int putchar(int s)
 {
-  USCI_A_UART_transmitData(usart_base,
+  USCI_A_UART_transmitData(log_usart_base,
 			   (char) s);
 
-  while(!USCI_A_UART_getInterruptStatus(usart_base, 
+  while(!USCI_A_UART_getInterruptStatus(log_usart_base, 
 					USCI_A_UART_TRANSMIT_INTERRUPT_FLAG )
 	); 
 
@@ -567,20 +603,20 @@ void main(void)
       if(brewing) {
 	time = timeouts[TASK_STOP_BREW]-timer_current_time(&timer);
       } else {
-	time =   brewing_time_ms;
+	time =   (brewing_time_s * ((uint32_t) 1024));
       }
       usart_printf("\rTemperature: %3lu.%02lu K , Time: %7lu.%03lu s",
       		   temperature/100,temperature%100,
 		   //		   (temperature-zero_degree_celsius_mk)/1000,
 		   // (temperature-zero_degree_celsius_mk)%1000,
-   		   time/1000,
-      		   time%1000
+   		   time/((uint32_t)1024),
+      		   time & ((1<<10) -1)
       		   );
       //      time = timer_current_time(&timer);
       // usart_printf("\n %lu\n",time);
       //      usart_printf("\rTemperature: %10u C",temperature);
       GPIO_toggleOutputOnPin(led_1_port,led_1_pin);
-      timeouts[TASK_STATUS_LOG]+=log_interval_ms;
+      timeouts[TASK_STATUS_LOG]+=log_interval;
     }
 
 
@@ -612,7 +648,7 @@ void main(void)
       while (GPIO_INPUT_PIN_LOW == GPIO_getInputPinValue(
     		     timer_start_port,
     		     timer_start_pin));
-      timeouts[TASK_STOP_BREW]= (timer_current_time(&timer) + brewing_time_ms);
+      timeouts[TASK_STOP_BREW]= (timer_current_time(&timer) + (brewing_time_s*((uint32_t) 1024)));
       brewing = 1;
     }
 
