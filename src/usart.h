@@ -10,5 +10,6 @@ typedef struct usart {
 } usart_t;
 
 void usart_init(usart_t *usart);
+int usart_putchar(usart_t *usart, int s);
 
 #endif //_usart_h

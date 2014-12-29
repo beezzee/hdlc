@@ -96,6 +96,7 @@
 
 
 #define log_usart_base USCI_A1_BASE
+usart_t log_usart;
 
 #define clock_source_mclk UCS_DCOCLK_SELECT 
 //#define clock_source_mclk UCS_XT2CLK_SELECT
@@ -396,15 +397,7 @@ void adc_init(void) {
 
 int putchar(int s)
 {
-  USCI_A_UART_transmitData(log_usart_base,
-			   (char) s);
-
-  while(!USCI_A_UART_getInterruptStatus(log_usart_base, 
-					USCI_A_UART_TRANSMIT_INTERRUPT_FLAG )
-	); 
-
-
-  return(s);
+  return usart_putchar(&log_usart,s);
 }
 
 /* static FILE usart_out = FDEV_SETUP_STREAM( usart_putchar,  */
@@ -478,7 +471,7 @@ void main(void)
   uint16_t voltage_at_calibration=0;
   const uint16_t *calibration_voltage_flash_ptr = flash_temperature_calibration_addr;
   int brewing = 0;
-  usart_t log_usart;
+
 
 
 #define TASK_STATUS_LOG 0

@@ -59,3 +59,16 @@ void usart_init(usart_t *usart) {
 
 
 }
+
+
+int usart_putchar(usart_t *usart, int s) {
+  USCI_A_UART_transmitData(usart->base_address,
+			   (char) s);
+
+  while(!USCI_A_UART_getInterruptStatus(usart->base_address, 
+					USCI_A_UART_TRANSMIT_INTERRUPT_FLAG )
+	); 
+
+
+  return(s);
+}
