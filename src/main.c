@@ -102,9 +102,17 @@
 */
 
 //9.6 kbaud @ 4 MHz
+/*
 #define usart_clock_prescale   26
 #define usart_mod_reg_1  1
 #define usart_mod_reg_2  0
+#define usart_oversampling USCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION 
+*/
+
+//115.2 kbaud @ 4 MHz
+#define usart_clock_prescale   2
+#define usart_mod_reg_1  2
+#define usart_mod_reg_2  3
 #define usart_oversampling USCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION 
 
 
