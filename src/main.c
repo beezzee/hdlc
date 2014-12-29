@@ -137,7 +137,7 @@
 
 #define UART_PRINTF
 
-#define time_out_value_ms 60000
+//#define time_out_value_ms 60000
 
 /**
    0 degree celsius equals 27315E-2 degree Kelvin
@@ -207,9 +207,9 @@ timer_t timer;
 /** 
     The time between two status updates.
  */
-#define log_interval_ms 500
+#define log_interval   500
 
-#define brewing_time_ms 150000
+#define brewing_time_s 150
 
 //Needs to be global in this
 //example. Otherwise, the
@@ -603,20 +603,20 @@ void main(void)
       if(brewing) {
 	time = timeouts[TASK_STOP_BREW]-timer_current_time(&timer);
       } else {
-	time =   brewing_time_ms;
+	time =   (brewing_time_s * ((uint32_t) 1024));
       }
       usart_printf("\rTemperature: %3lu.%02lu K , Time: %7lu.%03lu s",
       		   temperature/100,temperature%100,
 		   //		   (temperature-zero_degree_celsius_mk)/1000,
 		   // (temperature-zero_degree_celsius_mk)%1000,
-   		   time/1000,
-      		   time%1000
+   		   time/((uint32_t)1024),
+      		   time & ((1<<10) -1)
       		   );
       //      time = timer_current_time(&timer);
       // usart_printf("\n %lu\n",time);
       //      usart_printf("\rTemperature: %10u C",temperature);
       GPIO_toggleOutputOnPin(led_1_port,led_1_pin);
-      timeouts[TASK_STATUS_LOG]+=log_interval_ms;
+      timeouts[TASK_STATUS_LOG]+=log_interval;
     }
 
 
@@ -648,7 +648,7 @@ void main(void)
       while (GPIO_INPUT_PIN_LOW == GPIO_getInputPinValue(
     		     timer_start_port,
     		     timer_start_pin));
-      timeouts[TASK_STOP_BREW]= (timer_current_time(&timer) + brewing_time_ms);
+      timeouts[TASK_STOP_BREW]= (timer_current_time(&timer) + (brewing_time_s*((uint32_t) 1024)));
       brewing = 1;
     }
 

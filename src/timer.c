@@ -34,7 +34,7 @@ void timer_init(timer_t* t) {
   timer_stop(t);
 
   TIMER_B_configureContinuousMode(   TIMER_B0_BASE,
-				     TIMER_B_CLOCKSOURCE_SMCLK,
+				     TIMER_B_CLOCKSOURCE_ACLK,
 				     TIMER_B_CLOCKSOURCE_DIVIDER_32,
 				     TIMER_B_TBIE_INTERRUPT_ENABLE,
 				     TIMER_B_DO_CLEAR
