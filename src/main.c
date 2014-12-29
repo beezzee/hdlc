@@ -73,6 +73,7 @@
 #include "driverlib.h"
 
 #include "timer.h"
+#include "usart.h"
 
 #define motor_down_pin GPIO_PIN1
 #define motor_up_pin GPIO_PIN2
@@ -84,36 +85,14 @@
 #define led_2_port GPIO_PORT_P4
 #define led_2_pin GPIO_PIN7
 
-#define usart_port GPIO_PORT_P4
-#define usart_rx_pin GPIO_PIN5 
-#define usart_tx_pin GPIO_PIN4
+#define log_usart_port GPIO_PORT_P4
+#define log_usart_rx_pin GPIO_PIN5 
+#define log_usart_tx_pin GPIO_PIN4
 
 #define xt2_port GPIO_PORT_P5
 #define xt2_input_pin GPIO_PIN2
 #define xt2_output_pin GPIO_PIN3
 
-//from http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSP430BaudRateConverter/index.html
-//9.6 kbaud @ 32.768 kHz
-/*
-#define usart_clock_prescale   3
-#define usart_mod_reg_1  0
-#define usart_mod_reg_2  3
-#define usart_oversampling USCI_A_UART_LOW_FREQUENCY_BAUDRATE_GENERATION 
-*/
-
-//9.6 kbaud @ 4 MHz
-/*
-#define usart_clock_prescale   26
-#define usart_mod_reg_1  1
-#define usart_mod_reg_2  0
-#define usart_oversampling USCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION 
-*/
-
-//115.2 kbaud @ 4 MHz
-#define usart_clock_prescale   2
-#define usart_mod_reg_1  2
-#define usart_mod_reg_2  3
-#define usart_oversampling USCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION 
 
 
 #define log_usart_base USCI_A1_BASE
@@ -166,6 +145,8 @@
 
 #define event_no_event 0
 #define event_timeout_mask 1
+
+
 
 volatile uint16_t temperature_buffer[temperature_buffer_size];
 volatile int event;
@@ -376,40 +357,6 @@ void adc_init(void) {
 
 }
 
-void usart_init(void) {
-  //P3.4,5 = USCI_A0 TXD/RXD
-  GPIO_setAsPeripheralModuleFunctionInputPin(
-					     usart_port,
-					     usart_rx_pin + usart_tx_pin
-					     );
-
-  if ( STATUS_FAIL 
-       == USCI_A_UART_initAdvance(log_usart_base,
-				  USCI_A_UART_CLOCKSOURCE_SMCLK,
-				  usart_clock_prescale,
-				  usart_mod_reg_1,
-				  usart_mod_reg_2,
-				  USCI_A_UART_NO_PARITY,
-				  USCI_A_UART_LSB_FIRST,
-				  USCI_A_UART_ONE_STOP_BIT,
-				  USCI_A_UART_MODE,
-				  usart_oversampling)){
-    return;
-  }
-
-  //Enable UART module for operation
-  USCI_A_UART_enable(log_usart_base);
-
-  //Enable Receive Interrupt
-  USCI_A_UART_clearInterruptFlag(log_usart_base,
-				 USCI_A_UART_RECEIVE_INTERRUPT);
-  //  USCI_A_UART_enableInterrupt(log_usart_base,
-  //			      USCI_A_UART_RECEIVE_INTERRUPT);
-
-
-
-
-}
 
 #define usart_printf printf 
 
@@ -531,13 +478,18 @@ void main(void)
   uint16_t voltage_at_calibration=0;
   const uint16_t *calibration_voltage_flash_ptr = flash_temperature_calibration_addr;
   int brewing = 0;
-
+  usart_t log_usart;
 
 
 #define TASK_STATUS_LOG 0
 #define TASK_START_BREW 1
 #define TASK_STOP_BREW 2
 #define TASK_CNT 3
+
+  log_usart.base_address = log_usart_base;
+  log_usart.port = log_usart_port;
+  log_usart.rx_pin = log_usart_rx_pin;
+  log_usart.tx_pin = log_usart_tx_pin;
 
   uint32_t timeouts[TASK_CNT];
 
@@ -553,7 +505,7 @@ void main(void)
 	
   adc_init();
 
-  usart_init();
+  usart_init(&log_usart);
 
 
   timer_init(&timer);
