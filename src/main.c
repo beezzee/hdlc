@@ -88,6 +88,9 @@
 #define usart_rx_pin GPIO_PIN5 
 #define usart_tx_pin GPIO_PIN4
 
+#define xt2_port GPIO_PORT_P5
+#define xt2_input_pin GPIO_PIN2
+#define xt2_output_pin GPIO_PIN3
 
 //from http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSP430BaudRateConverter/index.html
 //9.6 kbaud
@@ -255,8 +258,8 @@ void clocks_init(void) {
       /*
 	configure XT2 pins for special function
       */
-      GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P5,GPIO_PIN2);
-      GPIO_setAsPeripheralModuleFunctionOutputPin(GPIO_PORT_P5,GPIO_PIN3);
+      GPIO_setAsPeripheralModuleFunctionInputPin(xt2_port,xt2_input_pin);
+      GPIO_setAsPeripheralModuleFunctionOutputPin(xt2_port,xt2_output_pin);
 
       UCS_XT2Start(xt2_drive_strength);
     };
