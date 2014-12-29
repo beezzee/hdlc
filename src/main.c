@@ -93,19 +93,28 @@
 #define xt2_output_pin GPIO_PIN3
 
 //from http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSP430BaudRateConverter/index.html
-//9.6 kbaud
+//9.6 kbaud @ 32.768 kHz
+/*
 #define usart_clock_prescale   3
 #define usart_mod_reg_1  0
 #define usart_mod_reg_2  3
 #define usart_oversampling USCI_A_UART_LOW_FREQUENCY_BAUDRATE_GENERATION 
+*/
+
+//9.6 kbaud @ 4 MHz
+#define usart_clock_prescale   26
+#define usart_mod_reg_1  1
+#define usart_mod_reg_2  0
+#define usart_oversampling USCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION 
+
 
 #define log_usart_base USCI_A1_BASE
 
-//#define clock_source_mclk UCS_DCOCLK_SELECT 
-#define clock_source_mclk UCS_XT2CLK_SELECT
+#define clock_source_mclk UCS_DCOCLK_SELECT 
+//#define clock_source_mclk UCS_XT2CLK_SELECT
 #define clock_divider_mclk UCS_CLOCK_DIVIDER_1
 
-#define clock_source_smclk UCS_XT1CLK_SELECT
+#define clock_source_smclk UCS_XT2CLK_SELECT
 #define clock_divider_smclk UCS_CLOCK_DIVIDER_1
 
 #define clock_source_amclk UCS_XT1CLK_SELECT
