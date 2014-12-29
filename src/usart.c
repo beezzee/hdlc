@@ -52,11 +52,55 @@ void usart_init(usart_t *usart) {
   //Enable Receive Interrupt
   USCI_A_UART_clearInterruptFlag(usart->base_address,
 				 USCI_A_UART_RECEIVE_INTERRUPT);
-  //  USCI_A_UART_enableInterrupt(base_address,
+  // USCI_A_UART_enableInterrupt(base_address,
   //			      USCI_A_UART_RECEIVE_INTERRUPT);
 
 
 
+
+}
+
+void usart_init_reception(usart_t *usart, usart_buffer_t *buffer) {
+  buffer->fill = 0;
+  buffer->status = 0;
+        //Enable Receive Interrupt
+        USCI_A_UART_clearInterruptFlag(usart->base_address,
+                                       USCI_A_UART_RECEIVE_INTERRUPT
+                                       );
+        USCI_A_UART_enableInterrupt(usart->base_address,
+                                    USCI_A_UART_RECEIVE_INTERRUPT
+                                    );
+
+
+}
+
+
+void usart_rx_interrupt_handler(usart_t *usart, usart_buffer_t *buffer) {
+
+
+
+  if(buffer->fill >= buffer->size) {
+    buffer->status |= USART_STATUS_BUFFER_OVERFLOW;
+    return;
+  }
+
+  buffer->data[buffer->fill++] 
+    = USCI_A_UART_receiveData(usart->base_address);
+
+  //if not a valid preamble byte restart reception
+  if((1 == buffer->fill) && (USART_PREAMBLE != buffer->data[USART_FRAME_INDEX_PREAMBLE])){
+    usart_init_reception(usart,buffer);
+    return;
+  }
+
+  if(buffer->fill == buffer->data[USART_FRAME_INDEX_FRAMESIZE]) {
+    buffer->status |= USART_STATUS_FRAME_COMPLETE;
+    USCI_A_UART_disableInterrupt(usart->base_address,
+				USCI_A_UART_RECEIVE_INTERRUPT
+				);
+
+    return;
+  }
 
 }
 

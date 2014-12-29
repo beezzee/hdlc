@@ -206,6 +206,14 @@ timer_t timer;
 //compiler removes it because it
 //is not used for anything.
 
+#define CMD_BUFFER_SIZE ((uint16_t) 256)
+
+uint8_t cmd_buffer_data[CMD_BUFFER_SIZE];
+
+usart_buffer_t cmd_buffer;
+
+usart_t cmd_usart;
+
 void memset_16(void *block, int c, size_t size){
   memset(block,c,2*size);
 }
@@ -479,12 +487,24 @@ void main(void)
 #define TASK_STOP_BREW 2
 #define TASK_CNT 3
 
+
+  uint32_t timeouts[TASK_CNT];
+
+
+
   log_usart.base_address = log_usart_base;
   log_usart.port = log_usart_port;
   log_usart.rx_pin = log_usart_rx_pin;
   log_usart.tx_pin = log_usart_tx_pin;
 
-  uint32_t timeouts[TASK_CNT];
+  /*
+    Temporarily, use the same usart for both, logging and for command
+    exchange.
+   */
+  cmd_usart = log_usart;
+
+  cmd_buffer.size = CMD_BUFFER_SIZE;
+  cmd_buffer.data = cmd_buffer_data;
 
   //  stdout = &usart_out;
   //Stop Watchdog Timer
@@ -539,6 +559,8 @@ void main(void)
   timeouts[TASK_STOP_BREW]=TIMEOUT_MAX;
 
   i=0;
+
+  usart_init_reception(&cmd_usart,&cmd_buffer);
   while(1) {
 
     //logging task
@@ -605,7 +627,10 @@ void main(void)
       brewing = 1;
     }
 
-
+    if(cmd_buffer.status & USART_STATUS_FRAME_COMPLETE) {
+      printf("\nFrame received\n");
+      usart_init_reception(&cmd_usart,&cmd_buffer);
+    }
     i++;
   }
   
@@ -649,13 +674,42 @@ void ADC12ISR(void)
 
 
 #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
-#pragma vector=TIMERB0_VECTOR
+#pragma vector=TIMERB1_VECTOR
 __interrupt
 #elif defined(__GNUC__)
 __attribute__((interrupt(TIMERB1_VECTOR)))
 #endif
-void TIMERB0_ISR(void)
+void TIMERB1_ISR(void)
 {
   timer_isr(&timer);
 }
 
+
+#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
+#pragma vector=USCI_A1_VECTOR
+__interrupt
+#elif defined(__GNUC__)
+__attribute__((interrupt(USCI_A0_VECTOR)))
+#endif
+void USCI_A1_ISR(void)
+{
+  /*
+    read to UCA1IV resets interrupt flag
+  */
+        switch (UCA1IV) {
+	  //Vector 2 - RXIFG
+        case 2:
+	  usart_rx_interrupt_handler(&cmd_usart,&cmd_buffer);
+	  break;
+	case 4:
+	  //TXIFG
+	  break;
+	case 6:
+	  //TTIFG
+	  break;
+	case 8:
+	  //TXCPTIFG
+	  break;
+        default: break;
+        }
+}
