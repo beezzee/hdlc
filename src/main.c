@@ -629,7 +629,11 @@ void main(void)
     }
 
     if(cmd_buffer.status & USART_STATUS_FRAME_COMPLETE) {
-      printf("\nFrame received\n");
+      printf("\nFrame received:");
+      for(i=0;i<cmd_buffer.fill;i++) {
+	printf("%02x ",cmd_buffer.data[i]);
+      }
+      printf("\n");
       usart_init_reception(&cmd_usart,&cmd_buffer);
     }
     i++;
