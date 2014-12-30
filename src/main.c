@@ -561,6 +561,7 @@ void main(void)
   i=0;
 
   usart_init_reception(&cmd_usart,&cmd_buffer);
+
   while(1) {
 
     //logging task
@@ -689,13 +690,14 @@ void TIMERB1_ISR(void)
 #pragma vector=USCI_A1_VECTOR
 __interrupt
 #elif defined(__GNUC__)
-__attribute__((interrupt(USCI_A0_VECTOR)))
+__attribute__((interrupt(USCI_A1_VECTOR)))
 #endif
 void USCI_A1_ISR(void)
 {
   /*
     read to UCA1IV resets interrupt flag
   */
+
         switch (UCA1IV) {
 	  //Vector 2 - RXIFG
         case 2:

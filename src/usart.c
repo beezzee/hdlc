@@ -77,6 +77,8 @@ void usart_init_reception(usart_t *usart, usart_buffer_t *buffer) {
 
 void usart_rx_interrupt_handler(usart_t *usart, usart_buffer_t *buffer) {
 
+  /* USCI_A_UART_clearInterruptFlag(usart->base_address, */
+  /* 				 USCI_A_UART_RECEIVE_INTERRUPT); */
 
 
   if(buffer->fill >= buffer->size) {
