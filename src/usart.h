@@ -1,6 +1,7 @@
 #ifndef _usart_h
 #define _usart_h
 
+#include "buffer.h"
 
 typedef struct usart {
   uint16_t base_address;
@@ -9,19 +10,30 @@ typedef struct usart {
   uint16_t tx_pin;
 } usart_t;
 
-typedef struct buffer {
-  uint16_t size;
-  uint16_t fill;
+typedef struct usart_buffer {
   uint8_t status;
-  uint8_t *data;
+  uint8_t preamble;
+  uint8_t remaining_bytes;
+  uint8_t crc_0;
+  uint8_t crc_1;
+  buffer_t *payload;
 } usart_buffer_t;
 
+#define USART_STATUS_ERROR_MASK 0xF0
+#define USART_STATUS_STATE_MASK 0x0F
+
 #define USART_STATUS_BUFFER_OVERFLOW 1<<4
-#define USART_STATUS_FRAME_COMPLETE  1
+
+#define USART_STATUS_WAIT_PREAMBLE 0
+#define USART_STATUS_WAIT_BYTE_COUNT 1
+#define USART_STATUS_WAIT_PAYLOAD 2
+#define USART_STATUS_FRAME_COMPLETE  3
+
 #define USART_PREAMBLE 0x00
 #define USART_FRAME_INDEX_PREAMBLE 0
 #define USART_FRAME_INDEX_FRAMESIZE 1
 
+int usart_frame_complete(usart_buffer_t *buffer);
 void usart_init_reception(usart_t *usart, usart_buffer_t *buffer);
 void usart_rx_interrupt_handler(usart_t *usart, usart_buffer_t *buffer);
 

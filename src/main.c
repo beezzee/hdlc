@@ -208,7 +208,7 @@ timer_t timer;
 
 #define CMD_BUFFER_SIZE ((uint16_t) 256)
 
-uint8_t cmd_buffer_data[CMD_BUFFER_SIZE];
+
 
 usart_buffer_t cmd_buffer;
 
@@ -490,7 +490,8 @@ void main(void)
 
   uint32_t timeouts[TASK_CNT];
 
-
+  uint8_t cmd_buffer_data[CMD_BUFFER_SIZE];
+  buffer_t cmd_buffer_payload;
 
   log_usart.base_address = log_usart_base;
   log_usart.port = log_usart_port;
@@ -503,8 +504,9 @@ void main(void)
    */
   cmd_usart = log_usart;
 
-  cmd_buffer.size = CMD_BUFFER_SIZE;
-  cmd_buffer.data = cmd_buffer_data;
+  cmd_buffer_payload.size = CMD_BUFFER_SIZE;
+  cmd_buffer_payload.data = cmd_buffer_data;
+  cmd_buffer.payload = &cmd_buffer_payload;
 
   //  stdout = &usart_out;
   //Stop Watchdog Timer
@@ -565,8 +567,8 @@ void main(void)
   while(1) {
 
     //logging task
-
-    if (timer_timeout(&timer,timeouts[TASK_STATUS_LOG])){
+    if(0){
+    // if (timer_timeout(&timer,timeouts[TASK_STATUS_LOG])){
       temperature_update(&voltage,temperature_buffer,log_temperature_buffer_size);
       /* usart_printf("\rTemperature: %7u mK (%7i mC), Time: %10u ms", */
       /* 		   temperature*temperature_slope, */
@@ -628,14 +630,16 @@ void main(void)
       brewing = 1;
     }
 
-    if(cmd_buffer.status & USART_STATUS_FRAME_COMPLETE) {
+    if(usart_frame_complete(&cmd_buffer)) {
+      //if(USART_STATUS_WAIT_PREAMBLE != cmd_buffer.status) {
       printf("\nFrame received:");
-      for(i=0;i<cmd_buffer.fill;i++) {
-	printf("%02x ",cmd_buffer.data[i]);
+      for(i=0;i<cmd_buffer.payload->fill;i++) {
+	printf("%02x ",cmd_buffer.payload->data[i]);
       }
       printf("\n");
       usart_init_reception(&cmd_usart,&cmd_buffer);
     }
+
     i++;
   }
   
