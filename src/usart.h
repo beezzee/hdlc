@@ -34,9 +34,9 @@ typedef struct usart_buffer {
 #define USART_FRAME_INDEX_FRAMESIZE 1
 
 int usart_frame_complete(usart_buffer_t *buffer);
-void usart_init_reception(usart_t *usart, usart_buffer_t *buffer);
-void usart_rx_interrupt_handler(usart_t *usart, usart_buffer_t *buffer);
-
+void usart_init_reception(usart_t *usart, buffer_t *buffer);
+void usart_rx_interrupt_handler(usart_t *usart, volatile usart_buffer_t *buffer);
+void usart_stop_reception(usart_t *usart);
 void usart_init(usart_t *usart);
 int usart_putchar(usart_t *usart, int s);
 

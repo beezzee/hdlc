@@ -65,10 +65,10 @@ int usart_frame_complete(usart_buffer_t *buffer) {
   return ((buffer->status & USART_STATUS_STATE_MASK) == USART_STATUS_FRAME_COMPLETE);
 }
 
-void usart_init_reception(usart_t *usart, usart_buffer_t *buffer) {
-  buffer->payload->fill = 0;
-  buffer->status = USART_STATUS_WAIT_PREAMBLE;
-  buffer->remaining_bytes = 0;
+void usart_init_reception(usart_t *usart, buffer_t *buffer) {
+  buffer->fill = 0;
+  //  buffer->status = USART_STATUS_WAIT_PREAMBLE;
+  // buffer->remaining_bytes = 0;
 
         //Enable Receive Interrupt
         USCI_A_UART_clearInterruptFlag(usart->base_address,
@@ -81,65 +81,78 @@ void usart_init_reception(usart_t *usart, usart_buffer_t *buffer) {
 
 }
 
+void usart_stop_reception(usart_t *usart) {
+    USCI_A_UART_disableInterrupt(usart->base_address,
+  				 USCI_A_UART_RECEIVE_INTERRUPT
+  				 );
 
-void usart_rx_interrupt_handler(usart_t *usart, usart_buffer_t *buffer) {
+}
+
+
+void usart_rx_interrupt_handler(usart_t *usart, volatile buffer_t *buffer) {
   uint8_t rx_data;
-  uint8_t next_state;
-  uint8_t new_error=0;
+  //  uint8_t next_state;
+  //  uint8_t new_error=0;
   /* USCI_A_UART_clearInterruptFlag(usart->base_address, */
   /* 				 USCI_A_UART_RECEIVE_INTERRUPT); */
 
 
   rx_data = USCI_A_UART_receiveData(usart->base_address);
 
-  switch (buffer->status & USART_STATUS_STATE_MASK) {
-  case USART_STATUS_WAIT_PREAMBLE:
-    if (USART_PREAMBLE == rx_data) {
-      next_state = USART_STATUS_WAIT_BYTE_COUNT;
-      buffer->preamble = rx_data;
-    } else {
-      usart_init_reception(usart,buffer);
-    }
-    break;
 
-  case USART_STATUS_WAIT_BYTE_COUNT:
-    buffer->remaining_bytes = rx_data;
-    if (buffer->remaining_bytes > 0 ) {
-      next_state =  USART_STATUS_WAIT_PAYLOAD;
-    } else {
-      next_state = USART_STATUS_FRAME_COMPLETE;
-    }
-    break;
-
-  case USART_STATUS_WAIT_PAYLOAD:
-    buffer->remaining_bytes --;
-    /*
-      always consume remaining bytes, even if not possible to store
-     */
-    if(buffer->payload->fill >= buffer->payload->size) {
-      new_error = USART_STATUS_BUFFER_OVERFLOW;
-    } else {
-      buffer->payload->data[buffer->payload->fill++] = rx_data;
-    }
-    if(0==buffer->remaining_bytes){
-      next_state = USART_STATUS_FRAME_COMPLETE;
-    }
-    break;
-  default:
-    break;
+  if(buffer->size > buffer->fill) {
+    buffer->data[buffer->fill++] = rx_data;
   }
 
-  if(USART_STATUS_FRAME_COMPLETE ==  next_state) {
-    USCI_A_UART_disableInterrupt(usart->base_address,
-				 USCI_A_UART_RECEIVE_INTERRUPT
-				 );
-  }
 
-  buffer->status &= ~USART_STATUS_STATE_MASK;
-  buffer->status |= next_state;
-  buffer->status |= new_error & USART_STATUS_ERROR_MASK;
+  /* switch (buffer->status & USART_STATUS_STATE_MASK) { */
+  /* case USART_STATUS_WAIT_PREAMBLE: */
+  /*   if (USART_PREAMBLE == rx_data) { */
+  /*     next_state = USART_STATUS_WAIT_BYTE_COUNT; */
+  /*     buffer->preamble = rx_data; */
+  /*   } else { */
+  /*     usart_init_reception(usart,buffer); */
+  /*   } */
+  /*   break; */
 
-  return;
+  /* case USART_STATUS_WAIT_BYTE_COUNT: */
+  /*   buffer->remaining_bytes = rx_data; */
+  /*   if (buffer->remaining_bytes > 0 ) { */
+  /*     next_state =  USART_STATUS_WAIT_PAYLOAD; */
+  /*   } else { */
+  /*     next_state = USART_STATUS_FRAME_COMPLETE; */
+  /*   } */
+  /*   break; */
+
+  /* case USART_STATUS_WAIT_PAYLOAD: */
+  /*   buffer->remaining_bytes --; */
+  /*   /\* */
+  /*     always consume remaining bytes, even if not possible to store */
+  /*    *\/ */
+  /*   if(buffer->payload->fill >= buffer->payload->size) { */
+  /*     new_error = USART_STATUS_BUFFER_OVERFLOW; */
+  /*   } else { */
+
+  /*   } */
+  /*   if(0==buffer->remaining_bytes){ */
+  /*     next_state = USART_STATUS_FRAME_COMPLETE; */
+  /*   } */
+  /*   break; */
+  /* default: */
+  /*   break; */
+  /* } */
+
+  /* if(USART_STATUS_FRAME_COMPLETE ==  next_state) { */
+  /*   USCI_A_UART_disableInterrupt(usart->base_address, */
+  /* 				 USCI_A_UART_RECEIVE_INTERRUPT */
+  /* 				 ); */
+  /* } */
+
+  /* buffer->status &= ~USART_STATUS_STATE_MASK; */
+  /* buffer->status |= next_state; */
+  /* buffer->status |= new_error & USART_STATUS_ERROR_MASK; */
+
+  /* return; */
 
 }
 

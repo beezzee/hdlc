@@ -210,7 +210,7 @@ timer_t timer;
 
 
 
-usart_buffer_t cmd_buffer;
+volatile buffer_t cmd_buffer;
 
 usart_t cmd_usart;
 
@@ -491,7 +491,7 @@ void main(void)
   uint32_t timeouts[TASK_CNT];
 
   uint8_t cmd_buffer_data[CMD_BUFFER_SIZE];
-  buffer_t cmd_buffer_payload;
+  //  buffer_t cmd_buffer_payload;
 
   log_usart.base_address = log_usart_base;
   log_usart.port = log_usart_port;
@@ -504,9 +504,9 @@ void main(void)
    */
   cmd_usart = log_usart;
 
-  cmd_buffer_payload.size = CMD_BUFFER_SIZE;
-  cmd_buffer_payload.data = cmd_buffer_data;
-  cmd_buffer.payload = &cmd_buffer_payload;
+  cmd_buffer.size = CMD_BUFFER_SIZE;
+  cmd_buffer.data = cmd_buffer_data;
+  //  cmd_buffer.payload = &cmd_buffer_payload;
 
   //  stdout = &usart_out;
   //Stop Watchdog Timer
