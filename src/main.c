@@ -645,12 +645,13 @@ void main(void)
     switch (hdlc_update_rx_buffer(&cmd_buffer,&hdlc_read_index, &usart_rx_buffer)) {
     case HDLC_STATUS_FRAME_COMPLETE:
       //if(USART_STATUS_WAIT_PREAMBLE != cmd_buffer.status) {
-      printf("\nFrame received:");
+      printf("\nFrame received: ");
       for(i=0;i<cmd_buffer.fill;i++) {
 	printf("%02x ",cmd_buffer.data[i]);
       }
       printf("\n");
       //      usart_init_reception(&cmd_usart,&cmd_buffer);
+      hdlc_init_reception(&cmd_buffer,&hdlc_read_index, &usart_rx_buffer);
       break;
 
     default:
