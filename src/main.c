@@ -74,6 +74,7 @@
 
 #include "timer.h"
 #include "usart.h"
+#include "hdlc.h"
 
 #define motor_down_pin GPIO_PIN1
 #define motor_up_pin GPIO_PIN2
@@ -208,9 +209,9 @@ timer_t timer;
 
 #define CMD_BUFFER_SIZE ((uint16_t) 256)
 
+#define USART_RX_BUFFER_SIZE ((uint16_t) 16)
 
-
-volatile buffer_t cmd_buffer;
+volatile buffer_t usart_rx_buffer;
 
 usart_t cmd_usart;
 
@@ -491,6 +492,11 @@ void main(void)
   uint32_t timeouts[TASK_CNT];
 
   uint8_t cmd_buffer_data[CMD_BUFFER_SIZE];
+  buffer_t cmd_buffer;
+  int hdlc_read_index;
+
+  uint8_t usart_rx_buffer_data[USART_RX_BUFFER_SIZE];
+
   //  buffer_t cmd_buffer_payload;
 
   log_usart.base_address = log_usart_base;
@@ -506,6 +512,11 @@ void main(void)
 
   cmd_buffer.size = CMD_BUFFER_SIZE;
   cmd_buffer.data = cmd_buffer_data;
+
+  usart_rx_buffer.size = USART_RX_BUFFER_SIZE;
+  usart_rx_buffer.data = usart_rx_buffer_data;
+  
+
   //  cmd_buffer.payload = &cmd_buffer_payload;
 
   //  stdout = &usart_out;
@@ -561,9 +572,10 @@ void main(void)
   timeouts[TASK_STOP_BREW]=TIMEOUT_MAX;
 
   i=0;
-
-  usart_init_reception(&cmd_usart,&cmd_buffer);
-
+  
+  
+  usart_start_reception(&cmd_usart);
+  hdlc_init_reception(&cmd_buffer,&hdlc_read_index, &usart_rx_buffer);
   while(1) {
 
     //logging task
@@ -630,17 +642,21 @@ void main(void)
       brewing = 1;
     }
 
-    if(usart_frame_complete(&cmd_buffer)) {
+    switch (hdlc_update_rx_buffer(&cmd_buffer,&hdlc_read_index, &usart_rx_buffer)) {
+    case HDLC_STATUS_FRAME_COMPLETE:
       //if(USART_STATUS_WAIT_PREAMBLE != cmd_buffer.status) {
       printf("\nFrame received:");
-      for(i=0;i<cmd_buffer.payload->fill;i++) {
-	printf("%02x ",cmd_buffer.payload->data[i]);
+      for(i=0;i<cmd_buffer.fill;i++) {
+	printf("%02x ",cmd_buffer.data[i]);
       }
       printf("\n");
-      usart_init_reception(&cmd_usart,&cmd_buffer);
+      //      usart_init_reception(&cmd_usart,&cmd_buffer);
+      break;
+
+    default:
+      break;
     }
 
-    i++;
   }
   
   
@@ -709,7 +725,7 @@ void USCI_A1_ISR(void)
         switch (UCA1IV) {
 	  //Vector 2 - RXIFG
         case 2:
-	  usart_rx_interrupt_handler(&cmd_usart,&cmd_buffer);
+	  usart_rx_interrupt_handler(&cmd_usart,&usart_rx_buffer);
 	  break;
 	case 4:
 	  //TXIFG

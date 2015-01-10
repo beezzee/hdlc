@@ -65,11 +65,7 @@ int usart_frame_complete(usart_buffer_t *buffer) {
   return ((buffer->status & USART_STATUS_STATE_MASK) == USART_STATUS_FRAME_COMPLETE);
 }
 
-void usart_init_reception(usart_t *usart, buffer_t *buffer) {
-  buffer->fill = 0;
-  //  buffer->status = USART_STATUS_WAIT_PREAMBLE;
-  // buffer->remaining_bytes = 0;
-
+void usart_start_reception(usart_t *usart) {
         //Enable Receive Interrupt
         USCI_A_UART_clearInterruptFlag(usart->base_address,
                                        USCI_A_UART_RECEIVE_INTERRUPT
@@ -79,6 +75,10 @@ void usart_init_reception(usart_t *usart, buffer_t *buffer) {
                                     );
 
 
+}
+
+uint8_t usart_get_byte(usart_t *usart) {
+  return USCI_A_UART_receiveData(usart->base_address);
 }
 
 void usart_stop_reception(usart_t *usart) {
@@ -100,9 +100,10 @@ void usart_rx_interrupt_handler(usart_t *usart, volatile buffer_t *buffer) {
   rx_data = USCI_A_UART_receiveData(usart->base_address);
 
 
-  if(buffer->size > buffer->fill) {
-    buffer->data[buffer->fill++] = rx_data;
-  }
+  buffer->data[buffer->fill] = rx_data;
+  buffer->fill++;
+  buffer->fill = buffer->fill % buffer->size;
+  
 
 
   /* switch (buffer->status & USART_STATUS_STATE_MASK) { */
