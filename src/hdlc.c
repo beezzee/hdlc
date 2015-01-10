@@ -23,7 +23,8 @@ void hdlc_init_reception(buffer_t *hdlc_buffer,int *read_index, const buffer_t *
   hdlc_buffer->fill = 0;
   hdlc_init_crc();
 
-  *read_index = in_buffer->fill;
+  /*do not do this as we may loose bytes that have not been processed yet*/
+  //  *read_index = in_buffer->fill;
 }
 
 
@@ -52,6 +53,7 @@ int hdlc_update_rx_buffer(buffer_t *hdlc_buffer,int *read_index, const buffer_t 
 	 (hdlc_buffer->fill < 4)  ||
 	 (HDLC_ESCAPE_OCTET 
 	  == hdlc_buffer->data[hdlc_buffer->fill-1])  ) {
+	/*rewind, but do not return to be able to consume more bytes in input buffer*/
 	hdlc_buffer->fill = 0;
       } else {
 	if (hdlc_crc_error(hdlc_buffer)) {
@@ -91,5 +93,6 @@ int hdlc_update_rx_buffer(buffer_t *hdlc_buffer,int *read_index, const buffer_t 
     }
   }
 
+  return HDLC_STATUS_LISTEN;
   
 }

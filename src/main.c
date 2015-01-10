@@ -653,8 +653,14 @@ void main(void)
       //      usart_init_reception(&cmd_usart,&cmd_buffer);
       hdlc_init_reception(&cmd_buffer,&hdlc_read_index, &usart_rx_buffer);
       break;
-
+    case HDLC_STATUS_BUFFER_OVERFLOW_ERROR:
+      printf("\nCommand buffer overflow\n");
+      hdlc_init_reception(&cmd_buffer,&hdlc_read_index, &usart_rx_buffer);
+      break;
+    case HDLC_STATUS_LISTEN:
+      break;
     default:
+      hdlc_init_reception(&cmd_buffer,&hdlc_read_index, &usart_rx_buffer);
       break;
     }
 
