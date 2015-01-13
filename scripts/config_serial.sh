@@ -17,7 +17,7 @@ echo
 # echo $COMMAND
 # $COMMAND
 echo 
-COMMAND="stty -F $DEVICE1 cs8 cread -cstopb -parenb -crtscts $FREQ"
+COMMAND="stty -F $DEVICE1 cs8 cread -cstopb -parenb -crtscts $FREQ icanon"
 echo $COMMAND
 $COMMAND
 echo 
