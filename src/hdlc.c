@@ -32,7 +32,13 @@ void hdlc_init_reception(buffer_t *hdlc_buffer,int *read_index, volatile const b
 int hdlc_update_rx_buffer(buffer_t *hdlc_buffer,int *read_index,  buffer_t volatile const *in_buffer) {
   uint8_t rx_data;
   
+  /*
+    declare as volatile to buffer the state. Otherwise, it may change
+    due to interrupt and the state becomes inconsistent.
+  */
   int volatile input_fill = in_buffer->fill;
+
+  int diff;
 
   while(*read_index != input_fill) {
 
@@ -72,7 +78,14 @@ int hdlc_update_rx_buffer(buffer_t *hdlc_buffer,int *read_index,  buffer_t volat
       available byte to decide what to do
     */
     if(HDLC_ESCAPE_OCTET == in_buffer->data[(*read_index)]) {
-      if( (abs(*read_index-input_fill) % in_buffer->size) < 2) {
+      /*compute how much the read index is behind the write index,
+	respecting wrapping at buffer end*/
+      diff = input_fill - *read_index;
+      if (diff < 0 ) {
+	diff += in_buffer->size;
+      }
+
+      if( diff < 2) {
 	return HDLC_STATUS_LISTEN;
       } else {
 	/* skip escape character */
