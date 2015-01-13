@@ -19,7 +19,7 @@ void hdlc_update_crc(uint8_t in) {
   return;
 }
 
-void hdlc_init_reception(buffer_t *hdlc_buffer,int *read_index, const buffer_t *in_buffer) {
+void hdlc_init_reception(buffer_t *hdlc_buffer,int *read_index, volatile const buffer_t *in_buffer) {
   hdlc_buffer->fill = 0;
   hdlc_init_crc();
 
@@ -27,17 +27,18 @@ void hdlc_init_reception(buffer_t *hdlc_buffer,int *read_index, const buffer_t *
   //  *read_index = in_buffer->fill;
 }
 
+#define abs(X) (X > 0 ? X : -X) 
 
-int hdlc_update_rx_buffer(buffer_t *hdlc_buffer,int *read_index, const buffer_t *in_buffer) {
+int hdlc_update_rx_buffer(buffer_t *hdlc_buffer,int *read_index,  buffer_t volatile const *in_buffer) {
   uint8_t rx_data;
+  
+  int volatile input_fill = in_buffer->fill;
 
-  while(*read_index != in_buffer->fill) {
-    /* consume next byte in in_buffer */
-    rx_data = in_buffer->data[(*read_index)++];
-    *read_index = *read_index % in_buffer->size;
-    
+  while(*read_index != input_fill) {
 
-    if(HDLC_FRAME_BOUNDARY_OCTET == rx_data) {
+    if(HDLC_FRAME_BOUNDARY_OCTET == in_buffer->data[(*read_index)]) {
+      (*read_index)++;
+      *read_index = *read_index % in_buffer->size;
       /*
 	rfc1662, 4.3:
 
@@ -50,9 +51,11 @@ int hdlc_update_rx_buffer(buffer_t *hdlc_buffer,int *read_index, const buffer_t 
 	silently discarded, and not counted as a FCS error.
       */
       if(
-	 (hdlc_buffer->fill < 4)  ||
-	 (HDLC_ESCAPE_OCTET 
-	  == hdlc_buffer->data[hdlc_buffer->fill-1])  ) {
+	 (hdlc_buffer->fill < 4)
+  /* || */
+  /* 	 (HDLC_ESCAPE_OCTET  */
+  /* 	  == hdlc_buffer->data[hdlc_buffer->fill-1])   */
+) {
 	/*rewind, but do not return to be able to consume more bytes in input buffer*/
 	hdlc_buffer->fill = 0;
       } else {
@@ -64,25 +67,48 @@ int hdlc_update_rx_buffer(buffer_t *hdlc_buffer,int *read_index, const buffer_t 
       } 
       /* if this byte is not frame boundary */
     } else {
-      /* the last received byte was the escape byte ..*/
-      if (
-	  (hdlc_buffer->fill > 0) && 
-	  (HDLC_ESCAPE_OCTET 
-	   == hdlc_buffer->data[hdlc_buffer->fill-1])) {
-
-	/* then bit-flip bit 5 */
-	rx_data= rx_data ^ 0x20;
-
-	/* overwrite escape byte */
-	hdlc_buffer->fill--;
+    /*
+      if we have detected an escape, we need to wait for one more
+      available byte to decide what to do
+    */
+    if(HDLC_ESCAPE_OCTET == in_buffer->data[(*read_index)]) {
+      if( (abs(*read_index-input_fill) % in_buffer->size) < 2) {
+	return HDLC_STATUS_LISTEN;
       } else {
-	/* update CRC only if this byte is not the escape byte ...*/
-	if(HDLC_ESCAPE_OCTET != rx_data) {
-	  hdlc_update_crc(hdlc_buffer->data[hdlc_buffer->fill-1]);	    
+	/* skip escape character */
+	(*read_index)++;
+	*read_index = *read_index % in_buffer->size;
+
+	/* flip bit 5 of next data byte */
+	rx_data = in_buffer->data[(*read_index)++] ^ 0x20;
+	*read_index = *read_index % in_buffer->size;
+      }
+    } else {
+      /* consume next byte in in_buffer */
+      rx_data = in_buffer->data[(*read_index)++];
+      *read_index = *read_index % in_buffer->size;
+    }
+
+
+      /* /\* the last received byte was the escape byte ..*\/ */
+      /* if ( */
+      /* 	  (hdlc_buffer->fill > 0) &&  */
+      /* 	  (HDLC_ESCAPE_OCTET  */
+      /* 	   == hdlc_buffer->data[hdlc_buffer->fill-1])) { */
+
+      /* 	/\* then bit-flip bit 5 *\/ */
+      /* 	rx_data= rx_data ^ 0x20; */
+
+      /* 	/\* overwrite escape byte *\/ */
+      /* 	hdlc_buffer->fill--; */
+      /* } else { */
+      /* 	/\* update CRC only if this byte is not the escape byte ...*\/ */
+      /* 	if(HDLC_ESCAPE_OCTET != rx_data) { */
+      /* 	  hdlc_update_crc(hdlc_buffer->data[hdlc_buffer->fill-1]);	     */
 	  
-	}
-      }	
-  
+      /* 	} */
+      /* }	 */
+      hdlc_update_crc(rx_data);	    
       if(hdlc_buffer->fill < hdlc_buffer->size) {
 	hdlc_buffer->data[hdlc_buffer->fill++]=rx_data;
       }	else {

@@ -211,7 +211,7 @@ timer_t timer;
 
 #define USART_RX_BUFFER_SIZE ((uint16_t) 16)
 
-volatile buffer_t usart_rx_buffer;
+buffer_t volatile usart_rx_buffer;
 
 usart_t cmd_usart;
 

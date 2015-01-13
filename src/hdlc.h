@@ -29,7 +29,7 @@ typedef struct hdlc_frame {
 #define HDLC_STATUS_FRAME_COMPLETE 1 << 1
 #define HDLC_STATUS_LISTEN 0
 
-int hdlc_update_rx_buffer(buffer_t *hdlc_buffer, int *read_index, const buffer_t *in_buffer);
-void hdlc_init_reception(buffer_t *hdlc_buffer,int *read_index, const buffer_t *in_buffer);
+int hdlc_update_rx_buffer(buffer_t *hdlc_buffer, int *read_index, volatile const buffer_t *in_buffer);
+void hdlc_init_reception(buffer_t *hdlc_buffer,int *read_index,  buffer_t volatile const *in_buffer);
 
 #endif //_hdlc_h
