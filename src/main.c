@@ -209,11 +209,31 @@ timer_t timer;
 
 #define CMD_BUFFER_SIZE ((uint16_t) 256)
 
+/**
+   Size of usart ring buffer for buffering incomming data. 
+
+   It needs to be large enough to buffer interrupt based incomming
+   data when receiving a frame and the processor is blocked by another
+   task.
+ */
 #define USART_RX_BUFFER_SIZE ((uint16_t) 16)
+
+
+/**
+   Size of the usart output buffer.
+
+   It has to be large enough to hold the largest chunk of data that
+   has to be transmitted, for example by print functions.
+ */
+#define USART_TX_BUFFER_SIZE ((uint16_t) 256)
 
 buffer_t volatile usart_rx_buffer;
 
 usart_t cmd_usart;
+
+int usart_tx_index;
+
+buffer_t volatile usart_tx_buffer;
 
 void memset_16(void *block, int c, size_t size){
   memset(block,c,2*size);
@@ -497,6 +517,8 @@ void main(void)
 
   uint8_t usart_rx_buffer_data[USART_RX_BUFFER_SIZE];
 
+  uint8_t usart_tx_buffer_data[USART_TX_BUFFER_SIZE];
+
   //  buffer_t cmd_buffer_payload;
 
   log_usart.base_address = log_usart_base;
@@ -515,7 +537,9 @@ void main(void)
 
   usart_rx_buffer.size = USART_RX_BUFFER_SIZE;
   usart_rx_buffer.data = usart_rx_buffer_data;
-  
+
+  usart_tx_buffer.size = USART_TX_BUFFER_SIZE;
+  usart_tx_buffer.data = usart_tx_buffer_data;
 
   //  cmd_buffer.payload = &cmd_buffer_payload;
 
@@ -575,6 +599,7 @@ void main(void)
   
   
   usart_start_reception(&cmd_usart);
+  usart_transmit_init(&cmd_usart,&usart_tx_index,&usart_tx_buffer);
   hdlc_init_reception(&cmd_buffer,&hdlc_read_index, &usart_rx_buffer);
   while(1) {
 
@@ -641,7 +666,7 @@ void main(void)
       timeouts[TASK_STOP_BREW]= (timer_current_time(&timer) + (brewing_time_s*((uint32_t) 1024)));
       brewing = 1;
     }
-
+    
     switch (hdlc_update_rx_buffer(&cmd_buffer,&hdlc_read_index, &usart_rx_buffer)) {
     case HDLC_STATUS_FRAME_COMPLETE:
       //if(USART_STATUS_WAIT_PREAMBLE != cmd_buffer.status) {
@@ -736,6 +761,7 @@ void USCI_A1_ISR(void)
 	  break;
 	case 4:
 	  //TXIFG
+	  usart_tx_interrupt_handler(&cmd_usart,&usart_tx_index,&usart_tx_buffer);
 	  break;
 	case 6:
 	  //TTIFG
