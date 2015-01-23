@@ -22,6 +22,6 @@
    <--- | ID | STATUS | ARG0 | ... | ARGN |
 
 **/
-int cmd_dispatcher(usart_buffer_t *rsp_buffer, const usart_buffer_t *cmd_buffer);
+int cmd_dispatcher(buffer_t *rsp_buffer, const buffer_t *cmd_buffer);
 
 #endif //_cmd_h
