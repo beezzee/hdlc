@@ -15,12 +15,14 @@
 
    cmd_buffer.data:
 
-   ---> | ID | ARG0 | ... | ARGN |
+   ---> | ID | STATUS | ARG0 | ... | ARGN |
 
    rsp_buffer.data:
 
    <--- | ID | STATUS | ARG0 | ... | ARGN |
 
+
+   STATUS of command shall be zero and is used for future use.
 **/
 int cmd_dispatcher(buffer_t *rsp_buffer, const buffer_t *cmd_buffer);
 

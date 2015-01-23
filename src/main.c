@@ -540,9 +540,10 @@ void main(void)
   /*
     The command buffer will point to the payload of the HDLC
     frame. The payload starts at 3rd byte (excluding address and
-    control byte).
+    control byte). We reserve two bytes for the CRC, hence we need to
+    remove 4 bytes in total, address, control, 2*CRC.
    */
-  cmd_buffer.size = hdlc_buffer.size - 2;
+  cmd_buffer.size = hdlc_buffer.size - 4;
   cmd_buffer.data = hdlc_buffer.data + 2;
 
   usart_rx_buffer.size = USART_RX_BUFFER_SIZE;
@@ -685,6 +686,7 @@ void main(void)
 	printf("%02x ",hdlc_buffer.data[i]);
       }
       printf("\n");
+      cmd_dispatcher(&cmd_buffer,&cmd_buffer);
       //      usart_init_reception(&cmd_usart,&hdlc_buffer);
       hdlc_init_reception(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer);
       break;
