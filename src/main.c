@@ -688,6 +688,7 @@ void main(void)
       }
       printf("\n");
       cmd_dispatcher(&cmd_buffer,&cmd_buffer);
+      hdlc_transmit_frame(&cmd_usart,&cmd_buffer);
       //      usart_init_reception(&cmd_usart,&hdlc_buffer);
       hdlc_init_reception(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer);
       break;

@@ -49,4 +49,6 @@ int usart_transmit_buffer(usart_t *usart, volatile int * index, volatile const b
 
 int usart_transmit_init(usart_t *usart, volatile int * index, volatile const buffer_t *buffer);
 
+
+int usart_transmit_buffer_blocking(usart_t *usart, const buffer_t *buffer);
 #endif //_usart_h

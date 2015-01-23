@@ -135,3 +135,33 @@ int hdlc_update_rx_buffer(buffer_t *hdlc_buffer,int *read_index,  buffer_t volat
   return HDLC_STATUS_LISTEN;
   
 }
+
+
+int hdlc_transmit_frame(usart_t *usart,const buffer_t *buffer){
+  int i;
+  int crc=0;
+  
+  /*
+    assume that buffer contains already initialzed address and control
+    data.
+   */
+  for (i=0;i<buffer->fill;i++) {
+    hdlc_update_crc(buffer->data[i]);
+    if (
+	(HDLC_FRAME_BOUNDARY_OCTET == buffer->data[i] )
+	||(HDLC_ESCAPE_OCTET == buffer->data[i] )
+	) {
+      usart_putchar(usart,HDLC_ESCAPE_OCTET);
+      usart_putchar(usart,buffer->data[i] ^ 0x20);
+    } else {
+      usart_putchar(usart,buffer->data[i]);
+    }
+  }
+  
+  /*
+    currently, CRC is only dummy function. Endianess of CRC has to be
+    checked.
+   */
+  usart_putchar(usart,crc & 0xFF);
+  usart_putchar(usart,crc >> 8);
+}

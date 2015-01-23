@@ -32,4 +32,14 @@ typedef struct hdlc_frame {
 int hdlc_update_rx_buffer(buffer_t *hdlc_buffer, int *read_index, volatile const buffer_t *in_buffer);
 void hdlc_init_reception(buffer_t *hdlc_buffer,int *read_index,  buffer_t volatile const *in_buffer);
 
+/**
+   Formats and transmit HDLC frame.
+
+   Takes the payload given by buffer and transmit its as a HDLC
+   frame. This includes escape octet stuffing and CRC. 
+
+   Note that this function is blocking.
+ */
+int hdlc_transmit_frame(usart_t *usart,const buffer_t *buffer);
+
 #endif //_hdlc_h

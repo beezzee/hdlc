@@ -191,6 +191,7 @@ int usart_transmit_buffer(usart_t *usart, volatile int * index, volatile const b
   }
 }
 
+
 void usart_tx_interrupt_handler(usart_t *usart, volatile int * index,  volatile const buffer_t *buffer) {
   uint8_t rx_data;
   //  uint8_t next_state;
