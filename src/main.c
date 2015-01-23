@@ -231,7 +231,7 @@ buffer_t volatile usart_rx_buffer;
 
 usart_t cmd_usart;
 
-int usart_tx_index;
+//int usart_tx_index;
 
 buffer_t volatile usart_tx_buffer;
 
@@ -599,7 +599,7 @@ void main(void)
   
   
   usart_start_reception(&cmd_usart);
-  usart_transmit_init(&cmd_usart,&usart_tx_index,&usart_tx_buffer);
+  //  usart_transmit_init(&cmd_usart,&usart_tx_index,&usart_tx_buffer);
   hdlc_init_reception(&cmd_buffer,&hdlc_read_index, &usart_rx_buffer);
   while(1) {
 
@@ -761,7 +761,7 @@ void USCI_A1_ISR(void)
 	  break;
 	case 4:
 	  //TXIFG
-	  usart_tx_interrupt_handler(&cmd_usart,&usart_tx_index,&usart_tx_buffer);
+	  //	  usart_tx_interrupt_handler(&cmd_usart,&usart_tx_index,&usart_tx_buffer);
 	  break;
 	case 6:
 	  //TTIFG
