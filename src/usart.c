@@ -49,7 +49,7 @@ void usart_init(usart_t *usart) {
   //Enable UART module for operation
   USCI_A_UART_enable(usart->base_address);
 
-  //Enable Receive Interrupt
+
   USCI_A_UART_clearInterruptFlag(usart->base_address,
 				 USCI_A_UART_RECEIVE_INTERRUPT);
   // USCI_A_UART_enableInterrupt(base_address,
@@ -168,4 +168,42 @@ int usart_putchar(usart_t *usart, int s) {
 
 
   return(s);
+}
+
+int usart_transmit_init(usart_t *usart, volatile int * index, volatile const buffer_t *buffer) {
+  USCI_A_UART_disableInterrupt(usart->base_address,
+				   USCI_A_UART_TRANSMIT_INTERRUPT);
+  *index = 0;
+}
+
+int usart_transmit_buffer(usart_t *usart, volatile int * index, volatile const buffer_t *buffer) {
+
+  if (0 == *index ) {
+    USCI_A_UART_clearInterruptFlag(usart->base_address,
+				   USCI_A_UART_TRANSMIT_INTERRUPT);
+    USCI_A_UART_enableInterrupt(usart->base_address,
+				USCI_A_UART_TRANSMIT_INTERRUPT);
+
+    *index=buffer->fill;
+    return USART_STATUS_TRANSMISSION_IDLE;
+  } else {
+    return USART_STATUS_TRANSMISSION_ONGOING;
+  }
+}
+
+void usart_tx_interrupt_handler(usart_t *usart, volatile int * index,  volatile const buffer_t *buffer) {
+  uint8_t rx_data;
+  //  uint8_t next_state;
+  //  uint8_t new_error=0;
+  USCI_A_UART_clearInterruptFlag(usart->base_address,
+  				 USCI_A_UART_RECEIVE_INTERRUPT);
+
+  if(0==*index) {
+    USCI_A_UART_disableInterrupt(usart->base_address,
+				 USCI_A_UART_TRANSMIT_INTERRUPT);
+  } else {
+    
+    USCI_A_UART_transmitData(usart->base_address, (char) buffer->data[buffer->fill-*index]);
+    *index--;
+  }
 }
