@@ -513,6 +513,7 @@ void main(void)
 
   uint8_t hdlc_buffer_data[HDLC_BUFFER_SIZE];
   buffer_t hdlc_buffer;
+  buffer_t cmd_buffer;
   
   int hdlc_read_index;
 
@@ -535,6 +536,14 @@ void main(void)
 
   hdlc_buffer.size = HDLC_BUFFER_SIZE;
   hdlc_buffer.data = hdlc_buffer_data;
+
+  /*
+    The command buffer will point to the payload of the HDLC
+    frame. The payload starts at 3rd byte (excluding address and
+    control byte).
+   */
+  cmd_buffer.size = hdlc_buffer.size - 2;
+  cmd_buffer.data = hdlc_buffer.data + 2;
 
   usart_rx_buffer.size = USART_RX_BUFFER_SIZE;
   usart_rx_buffer.data = usart_rx_buffer_data;
