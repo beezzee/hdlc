@@ -207,7 +207,7 @@ timer_t timer;
 //compiler removes it because it
 //is not used for anything.
 
-#define CMD_BUFFER_SIZE ((uint16_t) 256)
+#define HDLC_BUFFER_SIZE ((uint16_t) 256)
 
 /**
    Size of usart ring buffer for buffering incomming data. 
@@ -511,15 +511,16 @@ void main(void)
 
   uint32_t timeouts[TASK_CNT];
 
-  uint8_t cmd_buffer_data[CMD_BUFFER_SIZE];
-  buffer_t cmd_buffer;
+  uint8_t hdlc_buffer_data[HDLC_BUFFER_SIZE];
+  buffer_t hdlc_buffer;
+  
   int hdlc_read_index;
 
   uint8_t usart_rx_buffer_data[USART_RX_BUFFER_SIZE];
 
   uint8_t usart_tx_buffer_data[USART_TX_BUFFER_SIZE];
 
-  //  buffer_t cmd_buffer_payload;
+  //  buffer_t hdlc_buffer_payload;
 
   log_usart.base_address = log_usart_base;
   log_usart.port = log_usart_port;
@@ -532,8 +533,8 @@ void main(void)
    */
   cmd_usart = log_usart;
 
-  cmd_buffer.size = CMD_BUFFER_SIZE;
-  cmd_buffer.data = cmd_buffer_data;
+  hdlc_buffer.size = HDLC_BUFFER_SIZE;
+  hdlc_buffer.data = hdlc_buffer_data;
 
   usart_rx_buffer.size = USART_RX_BUFFER_SIZE;
   usart_rx_buffer.data = usart_rx_buffer_data;
@@ -541,7 +542,7 @@ void main(void)
   usart_tx_buffer.size = USART_TX_BUFFER_SIZE;
   usart_tx_buffer.data = usart_tx_buffer_data;
 
-  //  cmd_buffer.payload = &cmd_buffer_payload;
+  //  hdlc_buffer.payload = &hdlc_buffer_payload;
 
   //  stdout = &usart_out;
   //Stop Watchdog Timer
@@ -600,7 +601,7 @@ void main(void)
   
   usart_start_reception(&cmd_usart);
   //  usart_transmit_init(&cmd_usart,&usart_tx_index,&usart_tx_buffer);
-  hdlc_init_reception(&cmd_buffer,&hdlc_read_index, &usart_rx_buffer);
+  hdlc_init_reception(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer);
   while(1) {
 
     //logging task
@@ -667,25 +668,25 @@ void main(void)
       brewing = 1;
     }
     
-    switch (hdlc_update_rx_buffer(&cmd_buffer,&hdlc_read_index, &usart_rx_buffer)) {
+    switch (hdlc_update_rx_buffer(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer)) {
     case HDLC_STATUS_FRAME_COMPLETE:
-      //if(USART_STATUS_WAIT_PREAMBLE != cmd_buffer.status) {
+      //if(USART_STATUS_WAIT_PREAMBLE != hdlc_buffer.status) {
       printf("\nFrame received: ");
-      for(i=0;i<cmd_buffer.fill;i++) {
-	printf("%02x ",cmd_buffer.data[i]);
+      for(i=0;i<hdlc_buffer.fill;i++) {
+	printf("%02x ",hdlc_buffer.data[i]);
       }
       printf("\n");
-      //      usart_init_reception(&cmd_usart,&cmd_buffer);
-      hdlc_init_reception(&cmd_buffer,&hdlc_read_index, &usart_rx_buffer);
+      //      usart_init_reception(&cmd_usart,&hdlc_buffer);
+      hdlc_init_reception(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer);
       break;
     case HDLC_STATUS_BUFFER_OVERFLOW_ERROR:
       printf("\nCommand buffer overflow\n");
-      hdlc_init_reception(&cmd_buffer,&hdlc_read_index, &usart_rx_buffer);
+      hdlc_init_reception(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer);
       break;
     case HDLC_STATUS_LISTEN:
       break;
     default:
-      hdlc_init_reception(&cmd_buffer,&hdlc_read_index, &usart_rx_buffer);
+      hdlc_init_reception(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer);
       break;
     }
 
