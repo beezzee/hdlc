@@ -538,13 +538,14 @@ void main(void)
   hdlc_buffer.data = hdlc_buffer_data;
 
   /*
-    The command buffer will point to the payload of the HDLC
-    frame. The payload starts at 3rd byte (excluding address and
-    control byte). We reserve two bytes for the CRC, hence we need to
-    remove 4 bytes in total, address, control, 2*CRC.
+    For simplicity, we will use address and control bytes of the HDLC
+    frames for command id and status, respectively. Hence, the payload
+    of the HDLC frame, ie, the command, starts at the beginning of the
+    HDLC frame. We reserve two bytes for the CRC, hence we need to
+    remove 2 bytes from the buffers size;
    */
-  cmd_buffer.size = hdlc_buffer.size - 4;
-  cmd_buffer.data = hdlc_buffer.data + 2;
+  cmd_buffer.size = hdlc_buffer.size - 2;
+  cmd_buffer.data = hdlc_buffer.data;
 
   usart_rx_buffer.size = USART_RX_BUFFER_SIZE;
   usart_rx_buffer.data = usart_rx_buffer_data;
