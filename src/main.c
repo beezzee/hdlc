@@ -75,6 +75,7 @@
 #include "timer.h"
 #include "usart.h"
 #include "hdlc.h"
+#include "cmd.h"
 
 #define motor_down_pin GPIO_PIN1
 #define motor_up_pin GPIO_PIN2
@@ -521,6 +522,7 @@ void main(void)
 
   uint8_t usart_tx_buffer_data[USART_TX_BUFFER_SIZE];
 
+  int cmd_error;
   //  buffer_t hdlc_buffer_payload;
 
   log_usart.base_address = log_usart_base;
@@ -681,23 +683,49 @@ void main(void)
     
     switch (hdlc_update_rx_buffer(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer)) {
     case HDLC_STATUS_FRAME_COMPLETE:
-      //if(USART_STATUS_WAIT_PREAMBLE != hdlc_buffer.status) {
+
       printf("\nFrame received: ");
       for(i=0;i<hdlc_buffer.fill;i++) {
 	printf("%02x ",hdlc_buffer.data[i]);
       }
       printf("\n");
-      cmd_dispatcher(&cmd_buffer,&cmd_buffer);
-      hdlc_transmit_frame(&cmd_usart,&cmd_buffer);
+      
+      cmd_error=cmd_dispatcher(&cmd_buffer);
+      switch(cmd_error) {
+      case CMD_ERROR_OK:
+	switch(cmd_buffer.data[0]) {
+	case CMD_COMMAND_ECHO:
+	  cmd_error = cmd_command_echo(&cmd_buffer,&cmd_buffer);
+	  break;
+	default:
+	  cmd_error = cmd_format_error_message(&cmd_buffer,CMD_ERROR_UNKNOWN_COMMAND);
+	  break;
+	}
+	
+	hdlc_transmit_frame(&cmd_usart,&cmd_buffer);
+	break;
+
+	/*
+	  silence for all remaining errors
+	 */
+      default:
+	break;
+      }
+
+
+
       //      usart_init_reception(&cmd_usart,&hdlc_buffer);
       hdlc_init_reception(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer);
       break;
+
     case HDLC_STATUS_BUFFER_OVERFLOW_ERROR:
       printf("\nCommand buffer overflow\n");
       hdlc_init_reception(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer);
       break;
+
     case HDLC_STATUS_LISTEN:
       break;
+
     default:
       hdlc_init_reception(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer);
       break;
