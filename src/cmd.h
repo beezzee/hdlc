@@ -4,7 +4,8 @@
 #include "usart.h"
 
 #define CMD_COMMAND_ECHO 1
-
+#define CMD_COMMAND_CALIBRATE 2
+#define CMD_COMMAND_START_TIMEOUT 3
 
 #define CMD_ERROR_OK 0
 #define CMD_ERROR_UNKNOWN_COMMAND 1

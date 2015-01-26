@@ -21,4 +21,12 @@ uint32_t timer_current_time(timer_t * t);
 
 int timer_timeout(timer_t *t,uint32_t to);
 
+/**
+   Returns the value the timer will have in v seconds.
+
+   This function is useful to register a timeout and determine the
+   value of the timer at the timeout.
+ */
+uint32_t timer_in_future(timer_t *timer,uint16_t v);
+
 #endif //_timer_h

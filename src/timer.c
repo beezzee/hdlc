@@ -66,3 +66,7 @@ uint32_t timer_current_time(timer_t* t) {
 int timer_timeout(timer_t *t,uint32_t to) {
   return to<timer_current_time(t);
 }
+
+uint32_t timer_in_future(timer_t *timer,uint16_t v) {
+  return (timer_current_time(timer) + (v*((uint32_t) 1024)));
+}

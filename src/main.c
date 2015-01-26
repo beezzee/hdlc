@@ -490,7 +490,16 @@ void flash_update_word(const uint16_t* addr, uint16_t value) {
 		);
 }
 
+#define TASK_STATUS_LOG 0
+#define TASK_START_BREW 1
+#define TASK_STOP_BREW 2
+#define TASK_CNT 3
 
+
+void start_timeout(uint32_t *timeouts,uint16_t time_s) {
+  usart_printf("\nReset and start timer. Timeout in %i s.\n",time_s);
+  timeouts[TASK_STOP_BREW]= timer_in_future(&timer,time_s);
+}
 
 void main(void)
 {
@@ -500,14 +509,10 @@ void main(void)
   uint16_t voltage;
   uint16_t voltage_at_calibration=0;
   const uint16_t *calibration_voltage_flash_ptr = flash_temperature_calibration_addr;
-  int brewing = 0;
 
 
 
-#define TASK_STATUS_LOG 0
-#define TASK_START_BREW 1
-#define TASK_STOP_BREW 2
-#define TASK_CNT 3
+
 
 
   uint32_t timeouts[TASK_CNT];
@@ -629,10 +634,10 @@ void main(void)
 
       temperature = (((uint32_t) calibration_temperature)*((uint32_t) voltage));
       temperature/=voltage_at_calibration;
-      if(brewing) {
-	time = timeouts[TASK_STOP_BREW]-timer_current_time(&timer);
+      if(timer_timeout(&timer,timeouts[TASK_STOP_BREW])) {
+	time = 0;
       } else {
-	time =   (brewing_time_s * ((uint32_t) 1024));
+	time =   timeouts[TASK_STOP_BREW]-timer_current_time(&timer);
       }
       usart_printf("\rTemperature: %3lu.%02lu K , Time: %7lu.%03lu s",
       		   temperature/100,temperature%100,
@@ -652,7 +657,6 @@ void main(void)
     if(timer_timeout(&timer,timeouts[TASK_STOP_BREW])) {
       usart_printf("\nTimeout detected\n");
       timeouts[TASK_STOP_BREW]=TIMEOUT_MAX;
-      brewing = 0;
     }
 
 
@@ -673,12 +677,11 @@ void main(void)
     if(GPIO_INPUT_PIN_LOW == GPIO_getInputPinValue(
     		     timer_start_port,
     		     timer_start_pin)) {
-      usart_printf("\nReset and start timer at button release.\n");
+      
       while (GPIO_INPUT_PIN_LOW == GPIO_getInputPinValue(
     		     timer_start_port,
     		     timer_start_pin));
-      timeouts[TASK_STOP_BREW]= (timer_current_time(&timer) + (brewing_time_s*((uint32_t) 1024)));
-      brewing = 1;
+      start_timeout(timeouts,brewing_time_s);
     }
     
     switch (hdlc_update_rx_buffer(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer)) {
@@ -696,6 +699,18 @@ void main(void)
 	switch(cmd_buffer.data[0]) {
 	case CMD_COMMAND_ECHO:
 	  cmd_error = cmd_command_echo(&cmd_buffer,&cmd_buffer);
+	  break;
+	case CMD_COMMAND_CALIBRATE:
+	  /*
+	    TODO: implement
+	   */
+	  cmd_error = cmd_format_error_message(&cmd_buffer,CMD_ERROR_UNKNOWN_COMMAND);
+	  break;
+	case CMD_COMMAND_START_TIMEOUT:
+	  /*
+	    TODO: implement
+	   */
+	  cmd_error = cmd_format_error_message(&cmd_buffer,CMD_ERROR_UNKNOWN_COMMAND);
 	  break;
 	default:
 	  cmd_error = cmd_format_error_message(&cmd_buffer,CMD_ERROR_UNKNOWN_COMMAND);
