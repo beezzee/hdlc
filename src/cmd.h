@@ -5,6 +5,7 @@
 
 #define CMD_COMMAND_ECHO 1
 
+
 #define CMD_ERROR_OK 0
 #define CMD_ERROR_UNKNOWN_COMMAND 1
 #define CMD_ERROR_ARGUMENT 2
@@ -22,8 +23,8 @@
    <--- | ID | STATUS | ARG0 | ... | ARGN |
 
 
-   STATUS of command shall be zero and is used for future use.
+   STATUS of command  is used for future use.
 **/
-int cmd_dispatcher(buffer_t *rsp_buffer, const buffer_t *cmd_buffer);
+int cmd_dispatcher(const buffer_t *cmd_buffer);
 
 #endif //_cmd_h

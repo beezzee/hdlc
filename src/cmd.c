@@ -48,28 +48,12 @@ int cmd_command_echo(buffer_t *rsp_buffer, const buffer_t *cmd_buffer) {
 
 
 
-
-int cmd_dispatcher(buffer_t *rsp_buffer, const buffer_t *cmd_buffer) {
+int cmd_dispatcher(const buffer_t *cmd_buffer) {
   if (cmd_buffer->fill < 2) {
-    return cmd_format_error_message(rsp_buffer,CMD_ERROR_ARGUMENT);
+    return CMD_ERROR_ARGUMENT;
   }
 
-  /*
-    in this case, we are even not able to format the response
-  */
-  if(rsp_buffer->size < 2) {
-    return CMD_ERROR_BUFFER_OVERFLOW;
-  }
-
-  switch (cmd_buffer->data[0]) {
-  case CMD_COMMAND_ECHO:
-    return cmd_command_echo(rsp_buffer,cmd_buffer);
-    break;
-  default:
-    return cmd_format_error_message(rsp_buffer,CMD_ERROR_UNKNOWN_COMMAND);
-    break;
-  }
-
+  return CMD_ERROR_OK;
 }
 
 
