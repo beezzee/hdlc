@@ -10,9 +10,9 @@ hdlc_address = 0xff
 hdlc_control = 0x03
 
 
-def transmit_payload(port,data): 
+def transmit_payload(port,data,address=hdlc_address,control=hdlc_control): 
     
-    command = bytearray([hdlc_flag,hdlc_address,hdlc_control]) + data + bytearray([0x00,0x00,hdlc_flag])
+    command = bytearray([hdlc_flag,address,control]) + data + bytearray([0x00,0x00,hdlc_flag])
 
     formated_frame = ""
     for i in command:
