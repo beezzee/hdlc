@@ -28,4 +28,22 @@
 **/
 int cmd_dispatcher(const buffer_t *cmd_buffer);
 
+/**
+   Used for parsing timeout command.
+
+   ARG0: LSB of timeout value.
+   ARG1: MSB of timeout value.
+
+   @param rsp_buffer Buffer for response.
+   @param timeout Here timeout value is returned.
+   @param cmd_buffer Buffer for command.
+   @return Error code. 
+ */
+int cmd_command_start_timeout(buffer_t *rsp_buffer, uint16_t *timeout, const buffer_t *cmd_buffer);
+
+
+int cmd_command_echo(buffer_t *rsp_buffer, const buffer_t *cmd_buffer);
+
+int cmd_format_error_message(buffer_t *buffer, uint8_t error_message);
+
 #endif //_cmd_h

@@ -201,7 +201,7 @@ timer_t timer;
  */
 #define log_interval   500
 
-#define brewing_time_s 150
+#define brewing_time_default 150
 
 //Needs to be global in this
 //example. Otherwise, the
@@ -510,7 +510,7 @@ void main(void)
   uint16_t voltage_at_calibration=0;
   const uint16_t *calibration_voltage_flash_ptr = flash_temperature_calibration_addr;
 
-
+  uint16_t brewing_time;
 
 
 
@@ -681,7 +681,7 @@ void main(void)
       while (GPIO_INPUT_PIN_LOW == GPIO_getInputPinValue(
     		     timer_start_port,
     		     timer_start_pin));
-      start_timeout(timeouts,brewing_time_s);
+      start_timeout(timeouts,brewing_time_default);
     }
     
     switch (hdlc_update_rx_buffer(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer)) {
@@ -708,9 +708,15 @@ void main(void)
 	  break;
 	case CMD_COMMAND_START_TIMEOUT:
 	  /*
-	    TODO: implement
+	    read brewing time from command buffer and format response
 	   */
-	  cmd_error = cmd_format_error_message(&cmd_buffer,CMD_ERROR_UNKNOWN_COMMAND);
+	  cmd_error = cmd_command_start_timeout(&cmd_buffer,&brewing_time,&cmd_buffer);
+	  if (CMD_ERROR_OK == cmd_error) {
+	    /*
+	      start timeout
+	     */
+	    start_timeout(timeouts,brewing_time);
+	  }
 	  break;
 	default:
 	  cmd_error = cmd_format_error_message(&cmd_buffer,CMD_ERROR_UNKNOWN_COMMAND);

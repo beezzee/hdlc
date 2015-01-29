@@ -1,5 +1,6 @@
 #include "cmd.h"
 
+#include "msp_utils.h"
 
 int cmd_format_error_message(buffer_t *buffer, uint8_t error_message) {
   /*
@@ -46,7 +47,7 @@ int cmd_command_echo(buffer_t *rsp_buffer, const buffer_t *cmd_buffer) {
   return rsp_buffer->data[1];
 }
 
-int cmd_command_start_timer(buffer_t *rsp_buffer, uint16_t *timeout, const buffer_t *cmd_buffer) {
+int cmd_command_start_timeout(buffer_t *rsp_buffer, uint16_t *timeout, const buffer_t *cmd_buffer) {
   /*
     2 header bytes, 2 timout bytes, little-endian
    */
@@ -56,7 +57,7 @@ int cmd_command_start_timer(buffer_t *rsp_buffer, uint16_t *timeout, const buffe
 
   *timeout = uint16_from_little_endian(cmd_buffer->data);
 
-  return cmd_format_error_message,rsp_buffer,CMD_ERROR_OK);
+  return cmd_format_error_message(rsp_buffer,CMD_ERROR_OK);
   
 }
 
