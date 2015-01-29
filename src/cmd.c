@@ -46,6 +46,20 @@ int cmd_command_echo(buffer_t *rsp_buffer, const buffer_t *cmd_buffer) {
   return rsp_buffer->data[1];
 }
 
+int cmd_command_start_timer(buffer_t *rsp_buffer, uint16_t *timeout, const buffer_t *cmd_buffer) {
+  /*
+    2 header bytes, 2 timout bytes, little-endian
+   */
+  if(cmd_buffer->fill != 4) {
+    return cmd_format_error_message(rsp_buffer,CMD_ERROR_ARGUMENT);
+  }
+
+  *timeout = uint16_from_little_endian(cmd_buffer->data);
+
+  return cmd_format_error_message,rsp_buffer,CMD_ERROR_OK);
+  
+}
+
 
 
 int cmd_dispatcher(const buffer_t *cmd_buffer) {
