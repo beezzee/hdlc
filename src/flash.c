@@ -1,3 +1,4 @@
+#include "driverlib.h"
 #include "flash.h"
 
 int flash_write_buffer(const uint16_t* addr, buffer_t buffer) {

@@ -41,6 +41,7 @@ int cmd_dispatcher(const buffer_t *cmd_buffer);
  */
 int cmd_command_start_timeout(buffer_t *rsp_buffer, uint16_t *timeout, const buffer_t *cmd_buffer);
 
+int cmd_command_calibrate(buffer_t *rsp_buffer, uint16_t *temperature, const buffer_t *cmd_buffer);
 
 int cmd_command_echo(buffer_t *rsp_buffer, const buffer_t *cmd_buffer);
 

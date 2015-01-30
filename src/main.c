@@ -76,6 +76,7 @@
 #include "usart.h"
 #include "hdlc.h"
 #include "cmd.h"
+#include "flash.h"
 
 #define motor_down_pin GPIO_PIN1
 #define motor_up_pin GPIO_PIN2
@@ -138,7 +139,7 @@ usart_t log_usart;
    calibration temperature in Milli Kelvin
  */
 //#define calibration_temperature_mk 100E3 + zero_degree_celsius_mk
-#define calibration_temperature 2030 + zero_degree_celsius
+//#define calibration_temperature 2030 + zero_degree_celsius
 
 #define temp_calibration_port GPIO_PORT_P2
 #define temp_calibration_pin GPIO_PIN1
@@ -461,7 +462,10 @@ void main(void)
 
   uint16_t brewing_time;
 
-
+  /*
+    the temperature at the time of calibration
+   */
+  uint16_t calibration_temperature;
 
 
   uint32_t timeouts[TASK_CNT];
