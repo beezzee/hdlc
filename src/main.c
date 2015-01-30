@@ -88,9 +88,15 @@
 #define led_2_port GPIO_PORT_P4
 #define led_2_pin GPIO_PIN7
 
-#define log_usart_port GPIO_PORT_P4
-#define log_usart_rx_pin GPIO_PIN5 
-#define log_usart_tx_pin GPIO_PIN4
+#define log_usart_port GPIO_PORT_P3
+#define log_usart_rx_pin GPIO_PIN4 
+#define log_usart_tx_pin GPIO_PIN3
+
+#define cmd_usart_port GPIO_PORT_P4
+#define cmd_usart_rx_pin GPIO_PIN5 
+#define cmd_usart_tx_pin GPIO_PIN4
+
+
 
 #define xt2_port GPIO_PORT_P5
 #define xt2_input_pin GPIO_PIN2
@@ -98,8 +104,9 @@
 
 
 
-#define log_usart_base USCI_A1_BASE
-usart_t log_usart;
+#define log_usart_base USCI_A0_BASE
+#define cmd_usart_base USCI_A1_BASE
+
 
 #define clock_source_mclk UCS_DCOCLK_SELECT 
 //#define clock_source_mclk UCS_XT2CLK_SELECT
@@ -206,6 +213,7 @@ timer_t timer;
 buffer_t volatile usart_rx_buffer;
 
 usart_t cmd_usart;
+usart_t log_usart;
 
 //int usart_tx_index;
 
@@ -402,7 +410,7 @@ void adc_init(void) {
 
 int putchar(int s)
 {
-  return usart_putchar(&log_usart,s);
+  return usart_putchar(&cmd_usart,s);
 }
 
 /* static FILE usart_out = FDEV_SETUP_STREAM( usart_putchar,  */
@@ -492,7 +500,10 @@ void main(void)
     Temporarily, use the same usart for both, logging and for command
     exchange.
    */
-  cmd_usart = log_usart;
+  cmd_usart.base_address = cmd_usart_base;
+  cmd_usart.port = cmd_usart_port;
+  cmd_usart.rx_pin = cmd_usart_rx_pin;
+  cmd_usart.tx_pin = cmd_usart_tx_pin;
 
   hdlc_buffer.size = HDLC_BUFFER_SIZE;
   hdlc_buffer.data = hdlc_buffer_data;
@@ -529,6 +540,7 @@ void main(void)
 
   usart_init(&log_usart);
 
+  usart_init(&cmd_usart);
 
   timer_init(&timer);
 
