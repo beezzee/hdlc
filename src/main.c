@@ -498,7 +498,15 @@ void flash_update_word(const uint16_t* addr, uint16_t value) {
 
 void start_timeout(uint32_t *timeouts,uint16_t time_s) {
   usart_printf("\nReset and start timer. Timeout in %i s.\n",time_s);
-  timeouts[TASK_STOP_BREW]= timer_in_future(&timer,time_s);
+  if (time_s > 0 ) {
+    timeouts[TASK_STOP_BREW]= timer_in_future(&timer,time_s);
+  }
+  /*
+    disable timeout
+   */
+  else {
+    timeouts[TASK_STOP_BREW]= TIMEOUT_MAX;
+  }
 }
 
 void main(void)
