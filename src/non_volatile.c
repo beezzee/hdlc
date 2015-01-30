@@ -1,7 +1,7 @@
 #include "driverlib.h"
-#include "flash.h"
+#include "non_volatile.h"
 
-int flash_write_buffer(const uint16_t* addr, buffer_t buffer) {
+int nv_write_buffer(const uint16_t* addr, buffer_t buffer) {
 
 }
 
@@ -10,7 +10,7 @@ writing to segment A currently not supported because unlocking is
 required. Segment A contains calibration information of device and
 should not be overwritten.
  */
-int flash_update_word(const uint16_t* addr, uint16_t value) {
+int nv_update_word(const uint16_t* addr, uint16_t value) {
   
   uint16_t tmp[flash_segment_size/2];
   const unsigned int offset = ((unsigned int) addr) % flash_segment_size;

@@ -76,7 +76,7 @@
 #include "usart.h"
 #include "hdlc.h"
 #include "cmd.h"
-#include "flash.h"
+#include "non_volatile.h"
 
 #define motor_down_pin GPIO_PIN1
 #define motor_up_pin GPIO_PIN2
@@ -657,7 +657,7 @@ void main(void)
 	    printf("\n Temperature calibration: %4x units\n",voltage_at_calibration);
 	  
 	    printf("Program into flash...\n");
-	    flash_update_word(calibration_voltage_flash_ptr,voltage_at_calibration);
+	    nv_update_word(calibration_voltage_flash_ptr,voltage_at_calibration);
 	    printf("Read from flash: %4x\n",*calibration_voltage_flash_ptr);
 	  }
 	  break;

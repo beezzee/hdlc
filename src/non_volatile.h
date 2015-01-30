@@ -1,5 +1,5 @@
-#ifndef _flash_h
-#define _flash_h
+#ifndef _nv_h
+#define _nv_h
 
 #include "buffer.h"
 
@@ -31,8 +31,8 @@
 #define flash_info_d_addr   (0x1800)
 
 
-int flash_write_buffer(const uint16_t* addr, buffer_t buffer);
+int nv_write_buffer(const uint16_t* addr, buffer_t buffer);
 
-int flash_update_word(const uint16_t* addr, uint16_t value);
+int nv_update_word(const uint16_t* addr, uint16_t value);
 
 #endif
