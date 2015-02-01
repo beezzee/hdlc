@@ -692,6 +692,7 @@ void main(void)
 	    read brewing time from command buffer and format response
 	   */
 	  cmd_error = cmd_command_start_timeout(&cmd_buffer,&brewing_time,&cmd_buffer);
+	  printf("Start timer. Timeout in: %i s\n",brewing_time);
 	  if (CMD_ERROR_OK == cmd_error) {
 	    /*
 	      start timeout
