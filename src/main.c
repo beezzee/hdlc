@@ -240,7 +240,7 @@ void motor_up(void) {
 }
 
 void ports_init(void) {
-			    
+  int i;			    
   motor_stop();
   //Set P1.x to output direction
   GPIO_setAsOutputPin(
@@ -256,7 +256,23 @@ void ports_init(void) {
 		     temp_calibration_port,
 		     temp_calibration_pin);
 
-	
+  /* GPIO_setAsOutputPin( */
+  /* 		      log_usart_port,log_usart_tx_pin); */
+  
+  /* GPIO_setOutputLowOnPin(log_usart_port,log_usart_tx_pin); */
+
+  /* while(1) { */
+  /*   for(i=0;i<10000;i++) { */
+
+  /*   } */
+  /*   GPIO_setOutputLowOnPin(log_usart_port,log_usart_tx_pin); */
+  /*   //GPIO_setOutputLowOnPin(led_1_port,led_1_pin); */
+  /*   for(i=0;i<10000;i++) { */
+
+  /*   } */
+  /*   GPIO_setOutputHighOnPin(log_usart_port,log_usart_tx_pin); */
+  /*   //    GPIO_setOutputHighOnPin(led_1_port,led_1_pin); */
+  /* } */
 }
 
 void clocks_init(void) {
@@ -410,7 +426,7 @@ void adc_init(void) {
 
 int putchar(int s)
 {
-  return usart_putchar(&cmd_usart,s);
+  return usart_putchar(&log_usart,s);
 }
 
 /* static FILE usart_out = FDEV_SETUP_STREAM( usart_putchar,  */
@@ -496,10 +512,6 @@ void main(void)
   log_usart.rx_pin = log_usart_rx_pin;
   log_usart.tx_pin = log_usart_tx_pin;
 
-  /*
-    Temporarily, use the same usart for both, logging and for command
-    exchange.
-   */
   cmd_usart.base_address = cmd_usart_base;
   cmd_usart.port = cmd_usart_port;
   cmd_usart.rx_pin = cmd_usart_rx_pin;
@@ -538,9 +550,11 @@ void main(void)
 	
   adc_init();
 
-  usart_init(&log_usart);
+
 
   usart_init(&cmd_usart);
+
+  usart_init(&log_usart);
 
   timer_init(&timer);
 
