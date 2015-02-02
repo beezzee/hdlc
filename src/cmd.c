@@ -55,7 +55,7 @@ int cmd_command_start_timeout(buffer_t *rsp_buffer, uint16_t *timeout, const buf
     return cmd_format_error_message(rsp_buffer,CMD_ERROR_ARGUMENT);
   }
 
-  *timeout = uint16_from_little_endian(cmd_buffer->data);
+  *timeout = uint16_from_little_endian(cmd_buffer->data+2);
 
   return cmd_format_error_message(rsp_buffer,CMD_ERROR_OK);
   
@@ -69,7 +69,7 @@ int cmd_command_calibrate(buffer_t *rsp_buffer, uint16_t *temperature, const buf
     return cmd_format_error_message(rsp_buffer,CMD_ERROR_ARGUMENT);
   }
 
-  *temperature = uint16_from_little_endian(cmd_buffer->data);
+  *temperature = uint16_from_little_endian(cmd_buffer->data+2);
 
   return cmd_format_error_message(rsp_buffer,CMD_ERROR_OK);
   
