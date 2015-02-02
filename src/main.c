@@ -171,7 +171,9 @@ timer_t timer;
 /** 
     Adress of temperature calibration value
 */
-#define flash_temperature_calibration_addr ((uint16_t*) flash_info_c_addr)
+#define calibration_voltage_flash_ptr ((const uint16_t*) flash_info_c_addr)
+
+#define calibration_temperature_flash_ptr ((const uint16_t*) (flash_info_c_addr+2))
 
 /**
    The largest timestamp that we can handle
@@ -481,8 +483,7 @@ void main(void)
   uint32_t temperature;
   uint32_t time;
   uint16_t voltage;
-  uint16_t voltage_at_calibration=0;
-  const uint16_t *calibration_voltage_flash_ptr = flash_temperature_calibration_addr;
+  
 
   uint16_t brewing_time;
 
@@ -496,8 +497,8 @@ void main(void)
 
   uint8_t hdlc_buffer_data[HDLC_BUFFER_SIZE];
   buffer_t hdlc_buffer;
-  buffer_t cmd_buffer;
-  
+  //  buffer_t cmd_buffer;
+#define cmd_buffer hdlc_buffer
   int hdlc_read_index;
 
   uint8_t usart_rx_buffer_data[USART_RX_BUFFER_SIZE];
@@ -527,8 +528,8 @@ void main(void)
     HDLC frame. We reserve two bytes for the CRC, hence we need to
     remove 2 bytes from the buffers size;
    */
-  cmd_buffer.size = hdlc_buffer.size - 2;
-  cmd_buffer.data = hdlc_buffer.data;
+  // cmd_buffer.size = hdlc_buffer.size - 2;
+  //  cmd_buffer.data = hdlc_buffer.data;
 
   usart_rx_buffer.size = USART_RX_BUFFER_SIZE;
   usart_rx_buffer.data = usart_rx_buffer_data;
@@ -568,10 +569,6 @@ void main(void)
 
 
 
-  //initialize calibration voltage from flash
-  voltage_at_calibration = *calibration_voltage_flash_ptr;
-
-  printf("Loaded calibration voltage %4x\n",voltage_at_calibration);
 
   //Enter LPM4, Enable interrupts
   //  __bis_SR_register(LPM4_bits + GIE);
@@ -612,7 +609,8 @@ void main(void)
       /* 		   ); */
 
       temperature = (((uint32_t) calibration_temperature)*((uint32_t) voltage));
-      temperature/=voltage_at_calibration;
+      temperature/=*calibration_voltage_flash_ptr;
+
       if(timer_timeout(&timer,timeouts[TASK_STOP_BREW])) {
 	time = 0;
       } else {
@@ -659,7 +657,7 @@ void main(void)
     switch (hdlc_update_rx_buffer(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer)) {
     case HDLC_STATUS_FRAME_COMPLETE:
 
-      printf("\nFrame received: ");
+      printf("\n<-: ");
       for(i=0;i<hdlc_buffer.fill;i++) {
 	printf("%02x ",hdlc_buffer.data[i]);
       }
@@ -679,12 +677,12 @@ void main(void)
 	      TODO: capsulate into function
 	    */
 	    temperature_update(&voltage,temperature_buffer,log_temperature_buffer_size);
-	    voltage_at_calibration = voltage;
-	    printf("\n Temperature calibration: %4x units\n",voltage_at_calibration);
+	    printf("\n Temperature calibration: %4x units\n",voltage);
 	  
 	    printf("Program into flash...\n");
-	    nv_update_word(calibration_voltage_flash_ptr,voltage_at_calibration);
-	    printf("Read from flash: %4x\n",*calibration_voltage_flash_ptr);
+	    nv_update_word(calibration_voltage_flash_ptr,voltage);
+	    nv_update_word(calibration_temperature_flash_ptr,calibration_temperature);
+	    printf("Read from flash: %4x @ %i K\n",*calibration_voltage_flash_ptr,*calibration_temperature_flash_ptr);
 	  }
 	  break;
 	case CMD_COMMAND_START_TIMEOUT:
@@ -704,7 +702,14 @@ void main(void)
 	  cmd_error = cmd_format_error_message(&cmd_buffer,CMD_ERROR_UNKNOWN_COMMAND);
 	  break;
 	}
-	
+
+	printf("\n->: ");
+	for(i=0;i<cmd_buffer.fill;i++) {
+	  printf("%02x ",cmd_buffer.data[i]);
+	}
+	printf("\n");
+
+	  
 	hdlc_transmit_frame(&cmd_usart,&cmd_buffer);
 	break;
 
