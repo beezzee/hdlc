@@ -162,7 +162,7 @@ int hdlc_transmit_frame(usart_t *usart,const buffer_t *buffer){
       usart_putchar(usart,buffer->data[i]);
     }
   }
-  usart_putchar(usart,HDLC_FRAME_BOUNDARY_OCTET);
+
   
   /*
     currently, CRC is only dummy function. Endianess of CRC has to be
@@ -170,4 +170,6 @@ int hdlc_transmit_frame(usart_t *usart,const buffer_t *buffer){
    */
   usart_putchar(usart,crc & 0xFF);
   usart_putchar(usart,crc >> 8);
+
+  usart_putchar(usart,HDLC_FRAME_BOUNDARY_OCTET);
 }
