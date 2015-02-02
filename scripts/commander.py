@@ -1,5 +1,5 @@
 import serial
-
+import imp
 
 
 
@@ -28,17 +28,31 @@ def transmit_payload(port,data,address=hdlc_address,control=hdlc_control):
 
 def read_frame(port,timeout=None):
     port.timeout = timeout
-    data = bytearray()
-    while True: 
-        if len(port.read()) > 0:
-            b = port.read()[0]
-            print ("{0}".format(b))
-            data.append(b)
-            if  (b == hdlc_flag) and len(data) > 2: 
-                break
+    data = port.read(512)
 
     return data
 
+def hdlc_parse_frame(frame):
+    #assume that frame starts and ends with flag
+    data = bytearray()
+    i = 0
+
+    while i<len(frame) and frame[i] !=  hdlc_flag:
+        i+=1
+
+    i+=1
+
+    while i<len(frame) and frame[i] !=  hdlc_flag:
+        if frame[i] == hdlc_escape and i+1 < len(frame):
+            data.append(frame[i+1] ^ 0x20)
+            i+=1
+        else: 
+            data.append(frame[i])
+            
+        i+=1
+
+    return data
+        
 
 def open_port():
     return serial.Serial(port="/dev/ttyACM1",baudrate=115200,timeout=3)
@@ -51,7 +65,7 @@ def read_port(port,timeout=None):
 def exchange(port,data,address=hdlc_address,control=hdlc_control,timeout=None):
     transmit_payload(port,data,address,control)
 
-    frame = read_frame(port,timeout)
+    frame = hdlc_parse_frame(read_frame(port,timeout))
 
     print ("Received " + format_frame(frame))
 
