@@ -68,6 +68,10 @@ int hdlc_update_rx_buffer(buffer_t *hdlc_buffer,int *read_index,  buffer_t volat
 	if (hdlc_crc_error(hdlc_buffer)) {
 	  return HDLC_STATUS_CRC_ERROR;
 	} else {
+	  /*
+	    remove CRC bytes
+	   */
+	  hdlc_buffer->fill = hdlc_buffer->fill - 2;
 	  return HDLC_STATUS_FRAME_COMPLETE;
 	}
       } 
@@ -145,6 +149,7 @@ int hdlc_transmit_frame(usart_t *usart,const buffer_t *buffer){
     assume that buffer contains already initialzed address and control
     data.
    */
+  usart_putchar(usart,HDLC_FRAME_BOUNDARY_OCTET);
   for (i=0;i<buffer->fill;i++) {
     hdlc_update_crc(buffer->data[i]);
     if (
@@ -157,6 +162,7 @@ int hdlc_transmit_frame(usart_t *usart,const buffer_t *buffer){
       usart_putchar(usart,buffer->data[i]);
     }
   }
+  usart_putchar(usart,HDLC_FRAME_BOUNDARY_OCTET);
   
   /*
     currently, CRC is only dummy function. Endianess of CRC has to be
