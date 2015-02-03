@@ -21,7 +21,7 @@ def transmit_payload(port,data,address=hdlc_address,control=hdlc_control):
     
     formated_frame = format_frame(command)
 
-    print ("transmit: " + formated_frame)
+    print ("<- " + formated_frame)
 
     port.write(command)
 
@@ -30,6 +30,7 @@ def read_frame(port,timeout=None):
     port.timeout = timeout
     data = port.read(512)
 
+    print ("->" + format_frame(data))
     return data
 
 def hdlc_parse_frame(frame):
@@ -37,11 +38,14 @@ def hdlc_parse_frame(frame):
     data = bytearray()
     i = 0
 
+    #forward to start sequence
     while i<len(frame) and frame[i] !=  hdlc_flag:
         i+=1
 
+    #remove start sequence
     i+=1
 
+    #transform escaped bytes
     while i<len(frame) and frame[i] !=  hdlc_flag:
         if frame[i] == hdlc_escape and i+1 < len(frame):
             data.append(frame[i+1] ^ 0x20)
@@ -67,6 +71,6 @@ def exchange(port,data,address=hdlc_address,control=hdlc_control,timeout=None):
 
     frame = hdlc_parse_frame(read_frame(port,timeout))
 
-    print ("Received " + format_frame(frame))
+
 
 
