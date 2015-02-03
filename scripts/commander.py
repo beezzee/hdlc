@@ -15,27 +15,42 @@ def format_frame(frame):
         formated_frame += "{0:02x} ".format(i)
     return formated_frame
 
+def hdlc_encode_frame(data):
+    frame = [hdlc_flag]
+    for d in data:
+        if hdlc_escape == d or hdlc_flag == d:
+            frame.append(hdlc_escape)
+            frame.append(d ^ 0x20)
+        else:
+            frame.append(d)
+
+    #append dummy CRC and EOF marker
+    frame += [0x00,0x00,hdlc_flag]
+    return frame
+
 def transmit_payload(port,data,address=hdlc_address,control=hdlc_control): 
     
-    command = bytearray([hdlc_flag,address,control]) + data + bytearray([0x00,0x00,hdlc_flag])
+    command = [address,control] + data 
     
+    hdlc_command = hdlc_encode_frame(command)
+
     formated_frame = format_frame(command)
 
     print ("<- " + formated_frame)
 
-    port.write(command)
+    port.write(bytearray(hdlc_command))
 
 
 def read_frame(port,timeout=None):
     port.timeout = timeout
     data = port.read(512)
-
-    print ("->" + format_frame(data))
-    return data
+    l = list(data)
+    print ("->" + format_frame(l))
+    return l
 
 def hdlc_parse_frame(frame):
     #assume that frame starts and ends with flag
-    data = bytearray()
+    data = list()
     i = 0
 
     #forward to start sequence
@@ -70,6 +85,9 @@ def exchange(port,data,address=hdlc_address,control=hdlc_control,timeout=None):
     transmit_payload(port,data,address,control)
 
     frame = hdlc_parse_frame(read_frame(port,timeout))
+    print("Payload: " + frame[0:-2])
+    return frame
+
 
 
 
