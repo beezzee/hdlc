@@ -17,7 +17,7 @@
 
    cmd_buffer.data:
 
-   ---> | ID | STATUS | ARG0 | ... | ARGN |
+   ---> | ID | CNTRL  | ARG0 | ... | ARGN |
 
    rsp_buffer.data:
 
