@@ -24,6 +24,18 @@ def from_little_endian(l):
 
     return d
 
+
+class temperature:
+    v
+
+    #temperature in milli Kelvin
+    def __init__(self,v):
+        self.v = v
+
+    def __str__(self):
+        return self.v/1000 + "." (self.v % 1000)/100 + " K (" + (self.v-271150)/1000 + "." ((self.v-271150) % 1000)/100 + "C )"
+
+
 class status:
     currentTime
     timeout
@@ -36,8 +48,8 @@ class status:
 
         self.timeout = from_little_endian(d[0:1])
         self.currentTime = from_little_endian(d[2:3])
-        self.targetTemperature = from_little_endian(d[4:5])
-        self.currentTemperature = from_little_endian(d[6:7])
+        self.targetTemperature = temperature(from_little_endian(d[4:5]))
+        self.currentTemperature = temperature(from_little_endian(d[6:7]))
         self.position = from_little_endian(d[8:9])
         
     def __str__(self):
@@ -48,9 +60,11 @@ class status:
         else:
             s += "Timer: running, " + self.currentTime + " s from timeout\n"
 
-        s += "Temperature: " self.currentTemperature/1000 + "." (self.currentTemperature % 1000)/100 + " K (" + (self.currentTemperature-271150)/1000 + "." ((self.currentTemperature-271150) % 1000)/100 + "C )\n"
+        s += "Temperature: " + self.currentTemperature.str() + "\n"
 
-        s += "Position: " + self.position + " mm"
+        s += "Brewing temperature: " + self.targetTemperature.str() + "\n"
+
+        s += "Position: " + self.position + " mm\n"
         
 def format_frame(frame):
     formated_frame = ""
