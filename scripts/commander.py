@@ -25,6 +25,12 @@ def from_little_endian(l):
 
     return d
 
+class HdlcFrameFormatException(Exception):
+    def __init__(self,s):
+        self.s = s
+        
+    def __str__(self):
+        return str(self.s)
 
 class temperature:
     #temperature in milli Kelvin
@@ -133,7 +139,8 @@ def exchange(port,data,address=hdlc_address,control=hdlc_control,timeout=None):
     transmit_payload(port,data,address,control)
     raw = read_frame(port,timeout)
     frame = hdlc_parse_frame(raw)
-    assert len(frame) >= 4 , "Expect at least 4 bytes"
+    if len(frame) < 4: 
+        raise HdlcFrameFormatException("Expect at least 4 bytes but " + len(frame) + " received")
     print ("-> " + format_frame(frame)[0:-2] + " ( " + format_frame(raw) + ")")
     return frame
 
@@ -166,6 +173,9 @@ def calibrate(port,temperature,timeout=None):
 
 def get_payload(frame):
     #cutt off address, status, and crc 
+    if len(frame) < 4:
+        raise HdlcFrameFormatException("Min frame size of HDLC frame is 4")
+
     return frame[2:-2]
 
 def echo(port,payload,timeout=None):
