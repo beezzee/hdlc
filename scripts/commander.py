@@ -8,6 +8,7 @@ hdlc_escape = 0x7d
 hdlc_flag = 0x7e
 hdlc_address = 0xff
 hdlc_control = 0x03
+cmd_echo = 1
 cmd_calibrate = 2
 cmd_timeout = 3
 status_ok = 0
@@ -26,8 +27,6 @@ def from_little_endian(l):
 
 
 class temperature:
-    v
-
     #temperature in milli Kelvin
     def __init__(self,v):
         self.v = v
@@ -37,11 +36,6 @@ class temperature:
 
 
 class status:
-    currentTime
-    timeout
-    currentTemperature
-    targetTemperature
-    position
 
     def __init__(self,d):
         assert len(d) > 2*5 
@@ -91,7 +85,7 @@ def transmit_payload(port,data,address=hdlc_address,control=hdlc_control):
     
     hdlc_command = hdlc_encode_frame(command)
 
-    print ("<- " + format_frame(command) + "(" + format_frame(hdlc_command) + ")")
+    print ("<- " + format_frame(command) + "( " + format_frame(hdlc_command) + ")")
 
     port.write(bytearray(hdlc_command))
 
@@ -140,7 +134,7 @@ def exchange(port,data,address=hdlc_address,control=hdlc_control,timeout=None):
     raw = read_frame(port,timeout)
     frame = hdlc_parse_frame(raw)
     assert len(frame) >= 4 , "Expect at least 4 bytes"
-    print ("->" + format_frame(frame)[0:-2] + "(" + format_frame(raw) + ")")
+    print ("-> " + format_frame(frame)[0:-2] + " ( " + format_frame(raw) + ")")
     return frame
 
 def check_response(data):
@@ -154,10 +148,9 @@ def check_response(data):
         return status_crc_at_master
 
     if status_ok != data[1]:
-        print("Setting timeout failed with error status {0}".format(status))
+        print("Error {0}".format(status))
         return data[1]
 
-    print("Response ok")
     return status_ok
 
 def start_timeout(port,time=0,timeout=None):
@@ -171,11 +164,20 @@ def calibrate(port,temperature,timeout=None):
     response = exchange(port,request,cmd_calibrate,0,timeout)
     return check_response(response)
 
-def payload(frame):
+def get_payload(frame):
     #cutt off address, status, and crc 
     return frame[2:-2]
+
+def echo(port,payload,timeout=None):
+    response = exchange(port,payload,cmd_echo,0,timeout)
+    status = check_response(response)
+    if  status_ok != status:
+        return status
+    else:
+        return get_payload(response)
+
 
 def get_status(port,timeout=None):
     response = exchange(port,[],cmd_status,0,timeout)
     if status_ok == check_response(response):
-        return status(payload(response))
+        return status(get_payload(response))
