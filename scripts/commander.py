@@ -65,33 +65,76 @@ class status:
         s += "Brewing temperature: " + self.targetTemperature.str() + "\n"
 
         s += "Position: " + self.position + " mm\n"
-        
-def format_frame(frame):
-    formated_frame = ""
-    for i in frame:
-        formated_frame += "{0:02x} ".format(i)
-    return formated_frame
 
-def hdlc_encode_frame(data):
-    frame = [hdlc_flag]
-    for d in data:
-        if hdlc_escape == d or hdlc_flag == d:
-            frame.append(hdlc_escape)
-            frame.append(d ^ 0x20)
-        else:
-            frame.append(d)
+class HdlcFrame(list):
+    def __init__(self, payload=[],address=hdlc_address,control=hdlc_control):
+        list.__init__(self,payload)
+        self.address=address
+        self.control=control
+
+    def __str__(self):
+        return self.format()
+        
+    def format(self,base=16):
+        formated_frame = ""
+        formated_frame += "addr:{0:02x} ".format(self.address)
+        formated_frame += "ctrl:{0:02x} ".format(self.control)       
+        formated_frame += "data:"
+        for i in self:
+            formated_frame += "{0:02x} ".format(i)
+
+
+        return formated_frame
+
+    def encode(self):
+        frame = [hdlc_flag,self.address,self.control]
+        for d in self:
+            if hdlc_escape == d or hdlc_flag == d:
+                frame.append(hdlc_escape)
+                frame.append(d ^ 0x20)
+            else:
+                frame.append(d)
 
     #append dummy CRC and EOF marker
-    frame += [0x00,0x00,hdlc_flag]
-    return frame
+        frame += [0x00,0x00,hdlc_flag]
+        return frame
+
+    def decode(self,frame):
+    #assume that frame starts and ends with flag
+        data = list()
+        i = 0
+
+    #forward to start sequence
+        while i<len(frame) and frame[i] !=  hdlc_flag:
+            i+=1
+
+    #remove start sequence
+        i+=1
+
+    #transform escaped bytes
+        while i<len(frame) and frame[i] !=  hdlc_flag:
+            if frame[i] == hdlc_escape and i+1 < len(frame):
+                data.append(frame[i+1] ^ 0x20)
+                i+=1
+            else: 
+                data.append(frame[i])
+           
+            i+=1
+
+        if len(data) < 4:
+            raise HdlcFrameFormatException("Length " + len(data) + " < 4")
+        
+        self.__init__(data[2:-2],data[0],data[1])
+    
+
 
 def transmit_payload(port,data,address=hdlc_address,control=hdlc_control): 
     
-    command = [address,control] + data 
+    command = HdlcFrame([address,control] + data)
     
     hdlc_command = hdlc_encode_frame(command)
 
-    print ("<- " + format_frame(command) + "( " + format_frame(hdlc_command) + ")")
+    print ("<- " + command + "( " + hdlc_command + ")")
 
     port.write(bytearray(hdlc_command))
 
@@ -102,29 +145,6 @@ def read_frame(port,timeout=None):
     l = list(data)
     return l
 
-def hdlc_parse_frame(frame):
-    #assume that frame starts and ends with flag
-    data = list()
-    i = 0
-
-    #forward to start sequence
-    while i<len(frame) and frame[i] !=  hdlc_flag:
-        i+=1
-
-    #remove start sequence
-    i+=1
-
-    #transform escaped bytes
-    while i<len(frame) and frame[i] !=  hdlc_flag:
-        if frame[i] == hdlc_escape and i+1 < len(frame):
-            data.append(frame[i+1] ^ 0x20)
-            i+=1
-        else: 
-            data.append(frame[i])
-            
-        i+=1
-
-    return data
         
 
 def open_port(port="/dev/ttyACM1"):
