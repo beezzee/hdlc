@@ -124,7 +124,7 @@ class HdlcFrame(list):
         if len(data) < 4:
             raise HdlcFrameFormatException("Length " + len(data) + " < 4")
         
-        cls.(data[2:-2],data[0],data[1])
+        cls(data[2:-2],data[0],data[1])
     
 
 
