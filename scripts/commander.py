@@ -98,8 +98,8 @@ class HdlcFrame(list):
     #append dummy CRC and EOF marker
         frame += [0x00,0x00,hdlc_flag]
         return frame
-
-    def decode(self,frame):
+    @classmethod
+    def decode(cls,frame):
     #assume that frame starts and ends with flag
         data = list()
         i = 0
@@ -124,7 +124,7 @@ class HdlcFrame(list):
         if len(data) < 4:
             raise HdlcFrameFormatException("Length " + len(data) + " < 4")
         
-        self.__init__(data[2:-2],data[0],data[1])
+        cls.(data[2:-2],data[0],data[1])
     
 
 
