@@ -32,7 +32,7 @@ class HdlcFrameFormatException(Exception):
     def __str__(self):
         return str(self.s)
 
-class temperature:
+class Temperature:
     #temperature in milli Kelvin
     def __init__(self,v):
         self.v = v
@@ -41,15 +41,15 @@ class temperature:
         return self.v/1000 + "." (self.v % 1000)/100 + " K (" + (self.v-271150)/1000 + "." ((self.v-271150) % 1000)/100 + "C )"
 
 
-class status:
+class Status:
 
     def __init__(self,d):
         assert len(d) > 2*5 
 
         self.timeout = from_little_endian(d[0:1])
         self.currentTime = from_little_endian(d[2:3])
-        self.targetTemperature = temperature(from_little_endian(d[4:5]))
-        self.currentTemperature = temperature(from_little_endian(d[6:7]))
+        self.targetTemperature = Temperature(from_little_endian(d[4:5]))
+        self.currentTemperature = Temperature(from_little_endian(d[6:7]))
         self.position = from_little_endian(d[8:9])
         
     def __str__(self):
@@ -210,4 +210,4 @@ def echo(port,payload,timeout=None):
 def get_status(port,timeout=None):
     response = exchange(port,[],cmd_status,0,timeout)
     if status_ok == check_response(response):
-        return status(get_payload(response))
+        return Status(get_payload(response))
