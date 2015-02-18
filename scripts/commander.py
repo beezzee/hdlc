@@ -25,12 +25,21 @@ def from_little_endian(l):
 
     return d
 
-class HdlcFrameFormatException(Exception):
+class HdlcException(Exception):
     def __init__(self,s):
         self.s = s
         
     def __str__(self):
         return str(self.s)
+
+class HdlcFrameError(HdlcException):
+    pass
+
+class HdlcCrcError(HdlcException):
+    pass
+
+class HdlcSlaveError(HdlcException):
+    pass
 
 class Temperature:
     #temperature in milli Kelvin
@@ -98,6 +107,7 @@ class HdlcFrame(list):
     #append dummy CRC and EOF marker
         frame += [0x00,0x00,hdlc_flag]
         return frame
+
     @classmethod
     def decode(cls,frame):
     #assume that frame starts and ends with flag
@@ -122,21 +132,26 @@ class HdlcFrame(list):
             i+=1
 
         if len(data) < 4:
-            raise HdlcFrameFormatException("Length " + len(data) + " < 4")
-        
+            raise HdlcFrameError(len(data))
+
+    #dummy CRC check
+        if data[-2] != 0 or data[-1] != 0:
+            raise HdlcCrcError(0)
+
+        if status_ok != data[1]:
+            raise HdlcSlaveError(data[1])
+            
         cls(data[2:-2],data[0],data[1])
     
 
 
 def transmit_payload(port,data,address=hdlc_address,control=hdlc_control): 
     
-    command = HdlcFrame([address,control] + data)
+    command = HdlcFrame(data,address,control)
     
-    hdlc_command = hdlc_encode_frame(command)
+    print ("<- " + command + "( " + command.encode() + ")")
 
-    print ("<- " + command + "( " + hdlc_command + ")")
-
-    port.write(bytearray(hdlc_command))
+    port.write(bytearray(command.encode()))
 
 
 def read_frame(port,timeout=None):
@@ -155,51 +170,43 @@ def read_port(port,timeout=None):
     data = port.read()
     print (data)
 
-def exchange(port,data,address=hdlc_address,control=hdlc_control,timeout=None):
-    transmit_payload(port,data,address,control)
-    raw = read_frame(port,timeout)
-    frame = hdlc_parse_frame(raw)
-    if len(frame) < 4: 
-        raise HdlcFrameFormatException("Expect at least 4 bytes but " + len(frame) + " received")
-    print ("-> " + format_frame(frame)[0:-2] + " ( " + format_frame(raw) + ")")
-    return frame
+def exchange(port,data,address=hdlc_address,control=hdlc_control,timeout=None,retry=0):
 
-def check_response(data):
-    if len(data) < 4:
-        print("Error: at least 4 bytes expected")
-        return status_invalid_response
+    trial=0
+    while True:
 
-    #dummy CRC check
-    if data[-2] != 0 or data[-1] != 0:
-        print("CRC error")
-        return status_crc_at_master
+        transmit_payload(port,data,address,control)
+        raw = read_frame(port,timeout)
+        try:
+            frame = HdlcFrame.decode(raw)
+        except HdlcException:
+            trial+=1
+            print ("exch " + trial + " -> " + raw + " invalid")
+            if trial == retry:
+                print("give up")
+                return None
+        else:
+            print ("-> ( " + raw + " ) " + frame)            
+            return frame
 
-    if status_ok != data[1]:
-        print("Error {0}".format(status))
-        return data[1]
 
-    return status_ok
-
-def start_timeout(port,time=0,timeout=None):
+def start_timeout(port,time=0,timeout=None,trials=10):
     print("Set timeout to " + time)
     request = [time & 0xFF, time >> 8]
-    response = exchange(port,request,cmd_timeout,0,timeout)
-    return check_response(response)
+    response = exchange(port,request,cmd_timeout,0,timeout,trials)
+    if response != None:
+        print("Timeout started")
+    else:
+        print("Starting timeout failed")
+    
 
-def calibrate(port,temperature,timeout=None):
+def calibrate(port,temperature,timeout=None,trials=10):
     request = [temperature & 0xFF, temperatue >> 8]
-    response = exchange(port,request,cmd_calibrate,0,timeout)
+    response = exchange(port,request,cmd_calibrate,0,timeout,trials)
     return check_response(response)
 
-def get_payload(frame):
-    #cutt off address, status, and crc 
-    if len(frame) < 4:
-        raise HdlcFrameFormatException("Min frame size of HDLC frame is 4")
-
-    return frame[2:-2]
-
-def echo(port,payload,timeout=None):
-    response = exchange(port,payload,cmd_echo,0,timeout)
+def echo(port,payload,timeout=None,trials=10):
+    response = exchange(port,payload,cmd_echo,0,timeout,trials)
     status = check_response(response)
     if  status_ok != status:
         return status
@@ -207,7 +214,7 @@ def echo(port,payload,timeout=None):
         return get_payload(response)
 
 
-def get_status(port,timeout=None):
-    response = exchange(port,[],cmd_status,0,timeout)
+def get_status(port,timeout=None,trials=10):
+    response = exchange(port,[],cmd_status,0,timeout,trials)
     if status_ok == check_response(response):
         return Status(get_payload(response))
