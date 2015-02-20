@@ -149,7 +149,7 @@ def transmit_payload(port,data,address=hdlc_address,control=hdlc_control):
     
     command = HdlcFrame(data,address,control)
     
-    print ("<- " + command + "( " + command.encode() + ")")
+    print ("<- " + str(command) + "( " + str(command.encode()) + " )")
 
     port.write(bytearray(command.encode()))
 
@@ -179,25 +179,27 @@ def exchange(port,data,address=hdlc_address,control=hdlc_control,timeout=None,re
         raw = read_frame(port,timeout)
         try:
             frame = HdlcFrame.decode(raw)
-        except HdlcException:
+        except HdlcException as e:
             trial+=1
-            print ("exch " + trial + " -> " + raw + " invalid")
+            print ("exch " + str(trial) + " -> " + str(raw) + " invalid")
             if trial == retry:
                 print("give up")
-                return None
+                raise e
         else:
-            print ("-> ( " + raw + " ) " + frame)            
+            print ("-> ( " + str(raw) + " ) " + str(frame))
             return frame
 
 
 def start_timeout(port,time=0,timeout=None,trials=10):
-    print("Set timeout to " + time)
+    print("Set timeout to {0} s".format(time))
     request = [time & 0xFF, time >> 8]
-    response = exchange(port,request,cmd_timeout,0,timeout,trials)
-    if response != None:
-        print("Timeout started")
-    else:
+    try: 
+        response = exchange(port,request,cmd_timeout,0,timeout,trials)
+    except HdlcException:
         print("Starting timeout failed")
+    else:
+        print("Timeout started")
+
     
 
 def calibrate(port,temperature,timeout=None,trials=10):
