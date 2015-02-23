@@ -7,6 +7,9 @@ typedef struct timer_struct {
   volatile uint16_t time_most_significant;
 } timer_t;
 
+#define time_to_seconds(t) ( t >> 10 )
+
+
 void timer_isr(timer_t * t);
 
 void timer_reset(timer_t * t);

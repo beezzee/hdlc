@@ -76,6 +76,23 @@ int cmd_command_calibrate(buffer_t *rsp_buffer, uint16_t *temperature, const buf
 }
 
 
+int cmd_command_get_status(buffer_t *rsp_buffer,  const buffer_t *cmd_buffer, uint16_t timeout, uint16_t timestamp, uint16_t target_temperature, uint16_t temperature, uint16_t position) {
+  uint8_t *ptr =  rsp_buffer->data;
+
+  if (rsp_buffer->size < 12) {
+    return cmd_format_error_message(rsp_buffer,CMD_ERROR_BUFFER_OVERFLOW);
+  }
+  rsp_buffer->data[1]=CMD_ERROR_OK;
+
+  uint16_to_little_endian(ptr+ 2,timeout);
+  uint16_to_little_endian(ptr+ 4,timestamp);
+  uint16_to_little_endian(ptr+ 6,target_temperature);
+  uint16_to_little_endian(ptr+ 8,temperature);
+  uint16_to_little_endian(ptr+10,position);
+
+  rsp_buffer->fill = 12;
+  return CMD_ERROR_OK;
+}
 
 int cmd_dispatcher(const buffer_t *cmd_buffer) {
   if (cmd_buffer->fill < 2) {

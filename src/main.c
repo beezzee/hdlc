@@ -477,6 +477,16 @@ void start_timeout(uint32_t *timeouts,uint16_t time_s) {
   }
 }
 
+uint16_t remaining_time(uint32_t *timeouts) {
+  uint32_t time;
+      if(timer_timeout(&timer,timeouts[TASK_STOP_BREW])) {
+	time = 0;
+      } else {
+	time =   timeouts[TASK_STOP_BREW]-timer_current_time(&timer);
+      }
+      return time;
+}
+
 void main(void)
 {
   unsigned int i;
@@ -492,6 +502,10 @@ void main(void)
    */
   uint16_t calibration_temperature;
 
+  /*
+    the temperature that start timer
+   */
+  uint16_t target_temperature;
 
   uint32_t timeouts[TASK_CNT];
 
@@ -611,11 +625,8 @@ void main(void)
       temperature = (((uint32_t) calibration_temperature)*((uint32_t) voltage));
       temperature/=*calibration_voltage_flash_ptr;
 
-      if(timer_timeout(&timer,timeouts[TASK_STOP_BREW])) {
-	time = 0;
-      } else {
-	time =   timeouts[TASK_STOP_BREW]-timer_current_time(&timer);
-      }
+      time = remaining_time(timeouts);
+
       usart_printf("\rTemperature: %3lu.%02lu K , Time: %7lu.%03lu s",
       		   temperature/100,temperature%100,
 		   //		   (temperature-zero_degree_celsius_mk)/1000,
@@ -697,6 +708,14 @@ void main(void)
 	     */
 	    start_timeout(timeouts,brewing_time);
 	  }
+	  break;
+	case  CMD_COMMAND_GET_STATUS:
+	  /*
+	    return status of the device 
+	   */
+	  temperature_update(&voltage,temperature_buffer,log_temperature_buffer_size);
+	  cmd_error = cmd_command_get_status(&cmd_buffer,&cmd_buffer,brewing_time,remaining_time(timeouts),target_temperature,temperature,0);
+	  printf("Return status\n");
 	  break;
 	default:
 	  cmd_error = cmd_format_error_message(&cmd_buffer,CMD_ERROR_UNKNOWN_COMMAND);
