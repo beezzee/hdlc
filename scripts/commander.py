@@ -203,20 +203,30 @@ def start_timeout(port,time=0,timeout=None,trials=10):
     
 
 def calibrate(port,temperature,timeout=None,trials=10):
+    print("Calibrate at " + str(temperature))
     request = [temperature & 0xFF, temperatue >> 8]
-    response = exchange(port,request,cmd_calibrate,0,timeout,trials)
-    return check_response(response)
+    try:
+        response = exchange(port,request,cmd_calibrate,0,timeout,trials)
+    except HdlcException:
+        print("Calibration failed")
+    else:
+        print("Calibration successful")
+
 
 def echo(port,payload,timeout=None,trials=10):
-    response = exchange(port,payload,cmd_echo,0,timeout,trials)
-    status = check_response(response)
-    if  status_ok != status:
-        return status
+    try:
+        response = exchange(port,payload,cmd_echo,0,timeout,trials)
+    except HdlcException:
+        print("Exchange failed")
     else:
-        return get_payload(response)
+        print("Exchange Successful")
 
 
 def get_status(port,timeout=None,trials=10):
-    response = exchange(port,[],cmd_status,0,timeout,trials)
-    if status_ok == check_response(response):
-        return Status(get_payload(response))
+    try:
+        response = exchange(port,[],cmd_status,0,timeout,trials)
+    except HdlcException:
+        print("Status fetch failed")
+    else:
+        status = Status(response)
+        print("Status \n" + str(status))
