@@ -41,14 +41,19 @@ class HdlcCrcError(HdlcException):
 class HdlcSlaveError(HdlcException):
     pass
 
-class Temperature:
+class Temperature(float):
+    zero_degree_celcius = 271.150
     #temperature in milli Kelvin
-    def __init__(self,v):
-        self.v = v
-
+   
     def __str__(self):
-        return self.v/1000 + "." (self.v % 1000)/100 + " K (" + (self.v-271150)/1000 + "." ((self.v-271150) % 1000)/100 + "C )"
+        return "{0} K ({1} C)".format(float.__str__(self),self.to_celcius())
 
+    def to_celcius(self):
+        return self-Temperature.zero_degree_celcius
+
+    @classmethod
+    def from_celcius(cls,t):
+        return cls(t+Temperature.zero_degree_celcius)
 
 class Status:
 
@@ -57,8 +62,8 @@ class Status:
 
         self.timeout = from_little_endian(d[0:1])
         self.currentTime = from_little_endian(d[2:3])
-        self.targetTemperature = Temperature(from_little_endian(d[4:5]))
-        self.currentTemperature = Temperature(from_little_endian(d[6:7]))
+        self.targetTemperature = Temperature(from_little_endian(d[4:5])/1000)
+        self.currentTemperature = Temperature(from_little_endian(d[6:7])/1000)
         self.position = from_little_endian(d[8:9])
         
     def __str__(self):
@@ -190,9 +195,9 @@ def exchange(port,data,address=hdlc_address,control=hdlc_control,timeout=None,re
             return frame
 
 
-def start_timeout(port,time=0,timeout=None,trials=10):
-    print("Set timeout to {0} s".format(time))
-    request = [time & 0xFF, time >> 8]
+def start_timeout(port,time=0,temperature=Temperature.from_celcius(80),timeout=None,trials=10):
+    print("Start brewing at {0} and  timeout of {1} s".format(temperature,time))
+    request = [time & 0xFF, time >> 8, int(temperature) & 0xFF, int(temperature) >> 8 ]
     try: 
         response = exchange(port,request,cmd_timeout,0,timeout,trials)
     except HdlcException:
@@ -202,9 +207,9 @@ def start_timeout(port,time=0,timeout=None,trials=10):
 
     
 
-def calibrate(port,temperature,timeout=None,trials=10):
+def calibrate(port,temperature=Temperature.from_celcius(80),timeout=None,trials=10):
     print("Calibrate at " + str(temperature))
-    request = [temperature & 0xFF, temperatue >> 8]
+    request = [int(temperature) & 0xFF, int(temperatue) >> 8]
     try:
         response = exchange(port,request,cmd_calibrate,0,timeout,trials)
     except HdlcException:
