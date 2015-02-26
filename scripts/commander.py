@@ -197,7 +197,7 @@ def exchange(port,data,address=hdlc_address,control=hdlc_control,timeout=None,re
 
 def start_timeout(port,time=0,temperature=Temperature.from_celcius(80),timeout=None,trials=10):
     print("Start brewing at {0} and  timeout of {1} s".format(temperature,time))
-    request = [time & 0xFF, time >> 8, int(temperature) & 0xFF, int(temperature) >> 8 ]
+    request = [time & 0xFF, time >> 8, int(temperature*1000) & 0xFF, int(temperature*1000) >> 8 ]
     try: 
         response = exchange(port,request,cmd_timeout,0,timeout,trials)
     except HdlcException:
@@ -209,7 +209,7 @@ def start_timeout(port,time=0,temperature=Temperature.from_celcius(80),timeout=N
 
 def calibrate(port,temperature=Temperature.from_celcius(80),timeout=None,trials=10):
     print("Calibrate at " + str(temperature))
-    request = [int(temperature) & 0xFF, int(temperatue) >> 8]
+    request = [int(temperature*1000) & 0xFF, int(temperatue*1000) >> 8]
     try:
         response = exchange(port,request,cmd_calibrate,0,timeout,trials)
     except HdlcException:
