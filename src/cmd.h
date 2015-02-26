@@ -32,16 +32,28 @@ int cmd_dispatcher(const buffer_t *cmd_buffer);
 /**
    Used for parsing timeout command.
 
-   ARG0: LSB of timeout value.
-   ARG1: MSB of timeout value.
+   expected structure of cmd_buffer->data[2:]
+
+   ARG0: LSB of timeout value in seconds.
+   ARG1: MSB of timeout value in seconds.
+   ARG2: LSB of target brewing temperature in Milli Kelvin.
+   ARG3: MSB of target brewing temperature in Milli Kelvin.
 
    @param rsp_buffer Buffer for response.
-   @param timeout Here timeout value is returned.
+   @param timeout Will be set to brewing timeout.
+   @param target_temperature Will be set to target brewing temperature.
    @param cmd_buffer Buffer for command.
    @return Error code. 
  */
-int cmd_command_start_timeout(buffer_t *rsp_buffer, uint16_t *timeout, const buffer_t *cmd_buffer);
+int cmd_command_start_timeout(buffer_t *rsp_buffer, const buffer_t *cmd_buffer, uint16_t *timeout, uint16_t *target_temperature);
 
+/**
+   Used for parsing temperature calibration command.
+   
+   ARG0: LSB of calibration temperature in Milli Kelvin.
+   ARG1: MSB of calibration temperature in Milli Kelvin.
+
+ */
 int cmd_command_calibrate(buffer_t *rsp_buffer, uint16_t *temperature, const buffer_t *cmd_buffer);
 
 int cmd_command_echo(buffer_t *rsp_buffer, const buffer_t *cmd_buffer);
@@ -58,8 +70,8 @@ int cmd_format_error_message(buffer_t *buffer, uint8_t error_message);
    STATUS: The status message of the command processing.
    Timeout: The configured timeout in seconds
    Time: The time that is left until Timeout is reached in seconds.
-   Brewing Temperature: The target brewing temperature in Kelvin
-   Current Temperature: The current temperature in Kelvin
+   Brewing Temperature: The target brewing temperature in Milli Kelvin
+   Current Temperature: The current temperature in Milli Kelvin
    Position: The current position
 
 

@@ -47,15 +47,16 @@ int cmd_command_echo(buffer_t *rsp_buffer, const buffer_t *cmd_buffer) {
   return rsp_buffer->data[1];
 }
 
-int cmd_command_start_timeout(buffer_t *rsp_buffer, uint16_t *timeout, const buffer_t *cmd_buffer) {
+int cmd_command_start_timeout(buffer_t *rsp_buffer, const buffer_t *cmd_buffer, uint16_t *timeout, uint16_t *target_temperature){
   /*
-    2 header bytes, 2 timout bytes, little-endian
+    2 header bytes, 2 timout bytes, 2 temperature bytes little-endian
    */
-  if(cmd_buffer->fill != 4) {
+  if(cmd_buffer->fill != 6) {
     return cmd_format_error_message(rsp_buffer,CMD_ERROR_ARGUMENT);
   }
 
   *timeout = uint16_from_little_endian(cmd_buffer->data+2);
+  *target_temperature = uint16_from_little_endian(cmd_buffer->data+4);
 
   return cmd_format_error_message(rsp_buffer,CMD_ERROR_OK);
   
