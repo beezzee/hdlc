@@ -11,6 +11,8 @@ hdlc_control = 0x03
 cmd_echo = 1
 cmd_calibrate = 2
 cmd_timeout = 3
+cmd_status = 4
+
 status_ok = 0
 status_invalid_response = 1
 status_crc_at_master = 1
@@ -18,7 +20,7 @@ status_crc_at_slave = 1<<4
 
 def from_little_endian(l):
     r = 0
-    for d in l:
+    for d in reversed(l):
         assert int(d) < 256
         r = r << 8 
         r = r + int(d)
@@ -58,27 +60,28 @@ class Temperature(float):
 class Status:
 
     def __init__(self,d):
-        assert len(d) > 2*5 
+        assert len(d) >= 2*5 
 
-        self.timeout = from_little_endian(d[0:1])
-        self.currentTime = from_little_endian(d[2:3])
-        self.targetTemperature = Temperature(from_little_endian(d[4:5])/1000)
-        self.currentTemperature = Temperature(from_little_endian(d[6:7])/1000)
-        self.position = from_little_endian(d[8:9])
+        self.timeout = from_little_endian(d[0:2])
+        self.currentTime = from_little_endian(d[2:4])
+        self.targetTemperature = Temperature(from_little_endian(d[4:6])/1000)
+        self.currentTemperature = Temperature(from_little_endian(d[6:8])/1000)
+        self.position = from_little_endian(d[8:10])
         
     def __str__(self):
         s = ""
-        s += "Timeout: " + self.timeout + " s\n"
+        s += "Timeout: " + str(self.timeout) + " s\n"
         if self.currentTime == 0:
             s += "Timer: stopped\n"
         else:
-            s += "Timer: running, " + self.currentTime + " s from timeout\n"
+            s += "Timer: running, " + str(self.currentTime) + " s from timeout\n"
 
-        s += "Temperature: " + self.currentTemperature.str() + "\n"
+        s += "Temperature: " + str(self.currentTemperature) + "\n"
 
-        s += "Brewing temperature: " + self.targetTemperature.str() + "\n"
+        s += "Brewing temperature: " + str(self.targetTemperature) + "\n"
 
-        s += "Position: " + self.position + " mm\n"
+        s += "Position: " + str(self.position) + " mm\n"
+        return s
 
 class HdlcFrame(list):
     def __init__(self, payload=[],address=hdlc_address,control=hdlc_control):
@@ -146,7 +149,7 @@ class HdlcFrame(list):
         if status_ok != data[1]:
             raise HdlcSlaveError(data[1])
             
-        cls(data[2:-2],data[0],data[1])
+        return cls(data[2:-2],data[0],data[1])
     
 
 
@@ -225,6 +228,7 @@ def echo(port,payload,timeout=None,trials=10):
         print("Exchange failed")
     else:
         print("Exchange Successful")
+
 
 
 def get_status(port,timeout=None,trials=10):
