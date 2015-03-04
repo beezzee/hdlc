@@ -477,14 +477,33 @@ void start_timeout(uint32_t *timeouts,uint16_t time_s) {
   }
 }
 
+/**
+   Check if timer is running.
+
+   Returns 0 if the timer is not running, i.e., if either a timeout
+   occured (current time > timeout value) or if a timeout will never
+   occur (timeout at maximum). Otherwise return 1.
+ */
+int timer_running(uint32_t *timeouts) {
+  if (timer_timeout(&timer,timeouts[TASK_STOP_BREW])) {
+    return 0;
+  }
+
+  if (timeouts[TASK_STOP_BREW] == TIMEOUT_MAX) {
+    return 0;
+  }
+
+  return 1;
+}
+
 uint16_t remaining_time(uint32_t *timeouts) {
   uint32_t time;
-      if(timer_timeout(&timer,timeouts[TASK_STOP_BREW])) {
-	time = 0;
-      } else {
-	time =   timeouts[TASK_STOP_BREW]-timer_current_time(&timer);
-      }
-      return time;
+  if(timer_running(timeouts)) {
+    time = 0;
+  } else {
+    time =   timeouts[TASK_STOP_BREW]-timer_current_time(&timer);
+  }
+  return time;
 }
 
 void main(void)
@@ -495,7 +514,7 @@ void main(void)
   uint16_t voltage;
   
 
-  uint16_t brewing_time;
+  uint16_t brewing_time=brewing_time_default;
 
   /*
     the temperature at the time of calibration
@@ -662,7 +681,7 @@ void main(void)
       while (GPIO_INPUT_PIN_LOW == GPIO_getInputPinValue(
     		     timer_start_port,
     		     timer_start_pin));
-      start_timeout(timeouts,brewing_time_default);
+      start_timeout(timeouts,brewing_time);
     }
     
     switch (hdlc_update_rx_buffer(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer)) {
