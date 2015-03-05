@@ -466,6 +466,16 @@ void temperature_update(uint16_t *tmp, volatile uint16_t *tmp_buffer, int log_bu
   
 }
 
+uint32_t current_temperature(uint16_t calibration_temperature, uint16_t calibration_voltage, volatile uint16_t *buffer, int log_buffer_size) {
+  uint32_t temperature;
+  uint16_t voltage;
+  temperature_update(&voltage,buffer,log_buffer_size);
+  temperature = (((uint32_t) calibration_temperature)*((uint32_t) voltage));
+  temperature/=calibration_voltage;
+  return temperature;
+}
+
+
 
 #define TASK_STATUS_LOG 0
 #define TASK_START_BREW 1
@@ -640,19 +650,22 @@ void main(void)
   //  usart_transmit_init(&cmd_usart,&usart_tx_index,&usart_tx_buffer);
   hdlc_init_reception(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer);
   while(1) {
+    
+    /*
+      todo: add timing to prevent update in every iteration
+     */
+    
+    temperature = current_temperature(*calibration_temperature_flash_ptr,*calibration_voltage_flash_ptr,temperature_buffer,log_temperature_buffer_size);
 
     //logging task
     if(0){
     // if (timer_timeout(&timer,timeouts[TASK_STATUS_LOG])){
-      temperature_update(&voltage,temperature_buffer,log_temperature_buffer_size);
       /* usart_printf("\rTemperature: %7u mK (%7i mC), Time: %10u ms", */
       /* 		   temperature*temperature_slope, */
       /* 		   temperature*temperature_slope-zero_degree_celsius_mk, */
       /* 		   time_out_value_ms-timer_current_time() */
       /* 		   ); */
 
-      temperature = (((uint32_t) calibration_temperature)*((uint32_t) voltage));
-      temperature/=*calibration_voltage_flash_ptr;
 
       time = remaining_time(timeouts);
 
@@ -743,7 +756,6 @@ void main(void)
 	  /*
 	    return status of the device 
 	   */
-	  temperature_update(&voltage,temperature_buffer,log_temperature_buffer_size);
 	  cmd_error = cmd_command_get_status(&cmd_buffer,&cmd_buffer,brewing_time,remaining_time(timeouts),target_temperature,temperature,0);
 	  printf("Return status\n");
 	  break;
