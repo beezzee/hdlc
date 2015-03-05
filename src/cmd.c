@@ -4,11 +4,24 @@
 
 int cmd_format_error_message(buffer_t *buffer, uint8_t error_message) {
   /*
+    we dont't have enougth space to format error message
+  */
+  if(buffer->size < 2) {
+    return CMD_ERROR_BUFFER_OVERFLOW;
+  }
+
+  /*
     Keep the ID of the command.
   */
   buffer->fill = 1;
 
-  buffer_append_byte(buffer,error_message);
+  /*0 bytes appended */
+  if (0==buffer_append_byte(buffer,error_message)) {
+    return CMD_ERROR_BUFFER_OVERFLOW;
+  }
+
+  return CMD_ERROR_OK;
+
 }
 
 int cmd_command_echo(buffer_t *rsp_buffer, const buffer_t *cmd_buffer) {
@@ -52,13 +65,15 @@ int cmd_command_start_timeout(buffer_t *rsp_buffer, const buffer_t *cmd_buffer, 
     2 header bytes, 2 timout bytes, 2 temperature bytes little-endian
    */
   if(cmd_buffer->fill != 6) {
-    return cmd_format_error_message(rsp_buffer,CMD_ERROR_ARGUMENT);
+    cmd_format_error_message(rsp_buffer,CMD_ERROR_ARGUMENT);
+    return CMD_ERROR_ARGUMENT;
   }
 
   *timeout = uint16_from_little_endian(cmd_buffer->data+2);
   *target_temperature = uint16_from_little_endian(cmd_buffer->data+4);
 
-  return cmd_format_error_message(rsp_buffer,CMD_ERROR_OK);
+  cmd_format_error_message(rsp_buffer,CMD_ERROR_OK);
+  return CMD_ERROR_OK;
   
 }
 
@@ -67,12 +82,14 @@ int cmd_command_calibrate(buffer_t *rsp_buffer, uint16_t *temperature, const buf
     2 header bytes, 2 temperature bytes, little-endian
    */
   if(cmd_buffer->fill != 4) {
-    return cmd_format_error_message(rsp_buffer,CMD_ERROR_ARGUMENT);
+    cmd_format_error_message(rsp_buffer,CMD_ERROR_ARGUMENT);
+    return CMD_ERROR_ARGUMENT;
   }
 
   *temperature = uint16_from_little_endian(cmd_buffer->data+2);
 
-  return cmd_format_error_message(rsp_buffer,CMD_ERROR_OK);
+  cmd_format_error_message(rsp_buffer,CMD_ERROR_OK);
+  return CMD_ERROR_OK;
   
 }
 
@@ -81,7 +98,8 @@ int cmd_command_get_status(buffer_t *rsp_buffer,  const buffer_t *cmd_buffer, ui
   uint8_t *ptr =  rsp_buffer->data;
 
   if (rsp_buffer->size < 12) {
-    return cmd_format_error_message(rsp_buffer,CMD_ERROR_BUFFER_OVERFLOW);
+    cmd_format_error_message(rsp_buffer,CMD_ERROR_BUFFER_OVERFLOW);
+    return CMD_ERROR_BUFFER_OVERFLOW;
   }
   rsp_buffer->data[1]=CMD_ERROR_OK;
 
