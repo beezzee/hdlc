@@ -499,9 +499,10 @@ int timer_running(uint32_t *timeouts) {
 uint16_t remaining_time(uint32_t *timeouts) {
   uint32_t time;
   if(timer_running(timeouts)) {
-    time = 0;
-  } else {
     time =   timeouts[TASK_STOP_BREW]-timer_current_time(&timer);
+  } else {
+    time = 0;
+
   }
   return time;
 }
