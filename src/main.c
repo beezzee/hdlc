@@ -78,6 +78,15 @@
 #include "cmd.h"
 #include "non_volatile.h"
 
+/**
+   The unit of temperatures is not relevant in this file because all
+   temperatures are relative to the calibration temperature.  The
+   calibration temperature is given by an external command. Hence, if
+   the calibration temperature is given in 0.1 K, then all
+   temperatures are in 0.1 K. If the calibration temperature is given
+   in 1 K, then all temperatures are in 1K.
+ */
+
 #define motor_down_pin GPIO_PIN1
 #define motor_up_pin GPIO_PIN2
 #define motor_port GPIO_PORT_P1
@@ -647,8 +656,8 @@ void main(void)
 
       time = remaining_time(timeouts);
 
-      usart_printf("\rTemperature: %3lu.%02lu K , Time: %7lu.%03lu s",
-      		   temperature/100,temperature%100,
+      usart_printf("\rTemperature: %3lu.%01lu K , Time: %7lu.%03lu s",
+      		   temperature/10,temperature%10,
 		   //		   (temperature-zero_degree_celsius_mk)/1000,
 		   // (temperature-zero_degree_celsius_mk)%1000,
    		   time/((uint32_t)1024),
