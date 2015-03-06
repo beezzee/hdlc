@@ -73,6 +73,19 @@
 #include "driverlib.h"
 
 #include "timer.h"
+#include "usart.h"
+#include "hdlc.h"
+#include "cmd.h"
+#include "non_volatile.h"
+
+/**
+   The unit of temperatures is not relevant in this file because all
+   temperatures are relative to the calibration temperature.  The
+   calibration temperature is given by an external command. Hence, if
+   the calibration temperature is given in 0.1 K, then all
+   temperatures are in 0.1 K. If the calibration temperature is given
+   in 1 K, then all temperatures are in 1K.
+ */
 
 #define motor_down_pin GPIO_PIN1
 #define motor_up_pin GPIO_PIN2
@@ -84,39 +97,25 @@
 #define led_2_port GPIO_PORT_P4
 #define led_2_pin GPIO_PIN7
 
-#define usart_port GPIO_PORT_P4
-#define usart_rx_pin GPIO_PIN5 
-#define usart_tx_pin GPIO_PIN4
+#define log_usart_port GPIO_PORT_P3
+#define log_usart_rx_pin GPIO_PIN4 
+#define log_usart_tx_pin GPIO_PIN3
+
+#define cmd_usart_port GPIO_PORT_P4
+#define cmd_usart_rx_pin GPIO_PIN5 
+#define cmd_usart_tx_pin GPIO_PIN4
+
+
 
 #define xt2_port GPIO_PORT_P5
 #define xt2_input_pin GPIO_PIN2
 #define xt2_output_pin GPIO_PIN3
 
-//from http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSP430BaudRateConverter/index.html
-//9.6 kbaud @ 32.768 kHz
-/*
-#define usart_clock_prescale   3
-#define usart_mod_reg_1  0
-#define usart_mod_reg_2  3
-#define usart_oversampling USCI_A_UART_LOW_FREQUENCY_BAUDRATE_GENERATION 
-*/
-
-//9.6 kbaud @ 4 MHz
-/*
-#define usart_clock_prescale   26
-#define usart_mod_reg_1  1
-#define usart_mod_reg_2  0
-#define usart_oversampling USCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION 
-*/
-
-//115.2 kbaud @ 4 MHz
-#define usart_clock_prescale   2
-#define usart_mod_reg_1  2
-#define usart_mod_reg_2  3
-#define usart_oversampling USCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION 
 
 
-#define log_usart_base USCI_A1_BASE
+#define log_usart_base USCI_A0_BASE
+#define cmd_usart_base USCI_A1_BASE
+
 
 #define clock_source_mclk UCS_DCOCLK_SELECT 
 //#define clock_source_mclk UCS_XT2CLK_SELECT
@@ -156,7 +155,7 @@
    calibration temperature in Milli Kelvin
  */
 //#define calibration_temperature_mk 100E3 + zero_degree_celsius_mk
-#define calibration_temperature 2030 + zero_degree_celsius
+//#define calibration_temperature 2030 + zero_degree_celsius
 
 #define temp_calibration_port GPIO_PORT_P2
 #define temp_calibration_pin GPIO_PIN1
@@ -167,6 +166,8 @@
 #define event_no_event 0
 #define event_timeout_mask 1
 
+
+
 volatile uint16_t temperature_buffer[temperature_buffer_size];
 volatile int event;
 
@@ -175,37 +176,13 @@ uint16_t temperature_slope=100;
 timer_t timer;
 
 
-/**
-   The size of a single flash segment
-*/
-#define flash_segment_size 128
-
-
-/**
-   Start adresses of flash segment Info A
- */
-#define flash_info_a_addr   (0x1980)
-
-
-/**
-   Start adresses of flash segment Info B
- */
-#define flash_info_b_addr   (0x1900)
-
-/**
-   Start adresses of flash segment Info C
- */
-#define flash_info_c_addr   (0x1880)
-
-/**
-   Start adresses of flash segment Info D
- */
-#define flash_info_d_addr   (0x1800)
 
 /** 
     Adress of temperature calibration value
 */
-#define flash_temperature_calibration_addr ((uint16_t*) flash_info_c_addr)
+#define calibration_voltage_flash_ptr ((const uint16_t*) flash_info_c_addr)
+
+#define calibration_temperature_flash_ptr ((const uint16_t*) (flash_info_c_addr+2))
 
 /**
    The largest timestamp that we can handle
@@ -217,12 +194,41 @@ timer_t timer;
  */
 #define log_interval   500
 
-#define brewing_time_s 150
+#define brewing_time_default 150
 
 //Needs to be global in this
 //example. Otherwise, the
 //compiler removes it because it
 //is not used for anything.
+
+#define HDLC_BUFFER_SIZE ((uint16_t) 256)
+
+/**
+   Size of usart ring buffer for buffering incomming data. 
+
+   It needs to be large enough to buffer interrupt based incomming
+   data when receiving a frame and the processor is blocked by another
+   task.
+ */
+#define USART_RX_BUFFER_SIZE ((uint16_t) 16)
+
+
+/**
+   Size of the usart output buffer.
+
+   It has to be large enough to hold the largest chunk of data that
+   has to be transmitted, for example by print functions.
+ */
+#define USART_TX_BUFFER_SIZE ((uint16_t) 256)
+
+buffer_t volatile usart_rx_buffer;
+
+usart_t cmd_usart;
+usart_t log_usart;
+
+//int usart_tx_index;
+
+buffer_t volatile usart_tx_buffer;
 
 void memset_16(void *block, int c, size_t size){
   memset(block,c,2*size);
@@ -245,7 +251,7 @@ void motor_up(void) {
 }
 
 void ports_init(void) {
-			    
+  int i;			    
   motor_stop();
   //Set P1.x to output direction
   GPIO_setAsOutputPin(
@@ -261,7 +267,23 @@ void ports_init(void) {
 		     temp_calibration_port,
 		     temp_calibration_pin);
 
-	
+  /* GPIO_setAsOutputPin( */
+  /* 		      log_usart_port,log_usart_tx_pin); */
+  
+  /* GPIO_setOutputLowOnPin(log_usart_port,log_usart_tx_pin); */
+
+  /* while(1) { */
+  /*   for(i=0;i<10000;i++) { */
+
+  /*   } */
+  /*   GPIO_setOutputLowOnPin(log_usart_port,log_usart_tx_pin); */
+  /*   //GPIO_setOutputLowOnPin(led_1_port,led_1_pin); */
+  /*   for(i=0;i<10000;i++) { */
+
+  /*   } */
+  /*   GPIO_setOutputHighOnPin(log_usart_port,log_usart_tx_pin); */
+  /*   //    GPIO_setOutputHighOnPin(led_1_port,led_1_pin); */
+  /* } */
 }
 
 void clocks_init(void) {
@@ -376,40 +398,6 @@ void adc_init(void) {
 
 }
 
-void usart_init(void) {
-  //P3.4,5 = USCI_A0 TXD/RXD
-  GPIO_setAsPeripheralModuleFunctionInputPin(
-					     usart_port,
-					     usart_rx_pin + usart_tx_pin
-					     );
-
-  if ( STATUS_FAIL 
-       == USCI_A_UART_initAdvance(log_usart_base,
-				  USCI_A_UART_CLOCKSOURCE_SMCLK,
-				  usart_clock_prescale,
-				  usart_mod_reg_1,
-				  usart_mod_reg_2,
-				  USCI_A_UART_NO_PARITY,
-				  USCI_A_UART_LSB_FIRST,
-				  USCI_A_UART_ONE_STOP_BIT,
-				  USCI_A_UART_MODE,
-				  usart_oversampling)){
-    return;
-  }
-
-  //Enable UART module for operation
-  USCI_A_UART_enable(log_usart_base);
-
-  //Enable Receive Interrupt
-  USCI_A_UART_clearInterruptFlag(log_usart_base,
-				 USCI_A_UART_RECEIVE_INTERRUPT);
-  //  USCI_A_UART_enableInterrupt(log_usart_base,
-  //			      USCI_A_UART_RECEIVE_INTERRUPT);
-
-
-
-
-}
 
 #define usart_printf printf 
 
@@ -449,15 +437,7 @@ void usart_init(void) {
 
 int putchar(int s)
 {
-  USCI_A_UART_transmitData(log_usart_base,
-			   (char) s);
-
-  while(!USCI_A_UART_getInterruptStatus(log_usart_base, 
-					USCI_A_UART_TRANSMIT_INTERRUPT_FLAG )
-	); 
-
-
-  return(s);
+  return usart_putchar(&log_usart,s);
 }
 
 /* static FILE usart_out = FDEV_SETUP_STREAM( usart_putchar,  */
@@ -486,51 +466,14 @@ void temperature_update(uint16_t *tmp, volatile uint16_t *tmp_buffer, int log_bu
   
 }
 
-/**
-writing to segment A currently not supported because unlocking is
-required. Segment A contains calibration information of device and
-should not be overwritten.
- */
-void flash_update_word(const uint16_t* addr, uint16_t value) {
-  
-  uint16_t tmp[flash_segment_size/2];
-  const unsigned int offset = ((unsigned int) addr) % flash_segment_size;
-  uint8_t *segment_start = (((uint8_t*) addr) - offset);
-  int i;
-
-  //read complete segment
-  for(i=0;i<flash_segment_size/2;i++) {
-    tmp[i]=((uint16_t*) segment_start)[i];
-  }
-
-  tmp[offset/2]=value;
-
-  do {
-    //erase segment, segment address is used by masking 
-    //offset within segment
-    FLASH_segmentErase(segment_start);
-
-  } while (FLASH_eraseCheck((uint8_t*) segment_start,flash_segment_size) == STATUS_FAIL);
-
-  //Flash Write
-  FLASH_write16(
-		tmp,
-		(uint16_t*) segment_start,
-		flash_segment_size/2
-		);
-}
-
-
-
-void main(void)
-{
-  unsigned int i;
+uint32_t current_temperature(uint16_t calibration_temperature, uint16_t calibration_voltage, volatile uint16_t *buffer, int log_buffer_size) {
   uint32_t temperature;
-  uint32_t time;
   uint16_t voltage;
-  uint16_t voltage_at_calibration=0;
-  const uint16_t *calibration_voltage_flash_ptr = flash_temperature_calibration_addr;
-  int brewing = 0;
+  temperature_update(&voltage,buffer,log_buffer_size);
+  temperature = (((uint32_t) calibration_temperature)*((uint32_t) voltage));
+  temperature/=calibration_voltage;
+  return temperature;
+}
 
 
 
@@ -539,7 +482,115 @@ void main(void)
 #define TASK_STOP_BREW 2
 #define TASK_CNT 3
 
+
+void start_timeout(uint32_t *timeouts,uint16_t time_s) {
+  usart_printf("\nReset and start timer. Timeout in %i s.\n",time_s);
+  if (time_s > 0 ) {
+    timeouts[TASK_STOP_BREW]= timer_in_future(&timer,time_s);
+  }
+  /*
+    disable timeout
+   */
+  else {
+    timeouts[TASK_STOP_BREW]= TIMEOUT_MAX;
+  }
+}
+
+/**
+   Check if timer is running.
+
+   Returns 0 if the timer is not running, i.e., if either a timeout
+   occured (current time > timeout value) or if a timeout will never
+   occur (timeout at maximum). Otherwise return 1.
+ */
+int timer_running(uint32_t *timeouts) {
+  if (timer_timeout(&timer,timeouts[TASK_STOP_BREW])) {
+    return 0;
+  }
+
+  if (timeouts[TASK_STOP_BREW] == TIMEOUT_MAX) {
+    return 0;
+  }
+
+  return 1;
+}
+
+uint16_t remaining_time(uint32_t *timeouts) {
+  uint32_t time;
+  if(timer_running(timeouts)) {
+    time =   timeouts[TASK_STOP_BREW]-timer_current_time(&timer);
+  } else {
+    time = 0;
+
+  }
+  return time;
+}
+
+void main(void)
+{
+  unsigned int i;
+  uint32_t temperature;
+  uint32_t time;
+  uint16_t voltage;
+  
+
+  uint16_t brewing_time=brewing_time_default;
+
+  /*
+    the temperature at the time of calibration
+   */
+  uint16_t calibration_temperature;
+
+  /*
+    the temperature that start timer
+   */
+  uint16_t target_temperature;
+
   uint32_t timeouts[TASK_CNT];
+
+  uint8_t hdlc_buffer_data[HDLC_BUFFER_SIZE];
+  buffer_t hdlc_buffer;
+  //  buffer_t cmd_buffer;
+#define cmd_buffer hdlc_buffer
+  int hdlc_read_index;
+
+  uint8_t usart_rx_buffer_data[USART_RX_BUFFER_SIZE];
+
+  uint8_t usart_tx_buffer_data[USART_TX_BUFFER_SIZE];
+
+  int cmd_error;
+  //  buffer_t hdlc_buffer_payload;
+
+  log_usart.base_address = log_usart_base;
+  log_usart.port = log_usart_port;
+  log_usart.rx_pin = log_usart_rx_pin;
+  log_usart.tx_pin = log_usart_tx_pin;
+
+  cmd_usart.base_address = cmd_usart_base;
+  cmd_usart.port = cmd_usart_port;
+  cmd_usart.rx_pin = cmd_usart_rx_pin;
+  cmd_usart.tx_pin = cmd_usart_tx_pin;
+
+  hdlc_buffer.size = HDLC_BUFFER_SIZE;
+  hdlc_buffer.data = hdlc_buffer_data;
+
+  /*
+    For simplicity, we will use address and control bytes of the HDLC
+    frames for command id and status, respectively. Hence, the payload
+    of the HDLC frame, ie, the command, starts at the beginning of the
+    HDLC frame. We reserve two bytes for the CRC, hence we need to
+    remove 2 bytes from the buffers size;
+   */
+  // cmd_buffer.size = hdlc_buffer.size - 2;
+  //  cmd_buffer.data = hdlc_buffer.data;
+
+  usart_rx_buffer.size = USART_RX_BUFFER_SIZE;
+  usart_rx_buffer.data = usart_rx_buffer_data;
+
+  usart_tx_buffer.size = USART_TX_BUFFER_SIZE;
+  usart_tx_buffer.data = usart_tx_buffer_data;
+
+  //  hdlc_buffer.payload = &hdlc_buffer_payload;
 
   //  stdout = &usart_out;
   //Stop Watchdog Timer
@@ -553,8 +604,11 @@ void main(void)
 	
   adc_init();
 
-  usart_init();
 
+
+  usart_init(&cmd_usart);
+
+  usart_init(&log_usart);
 
   timer_init(&timer);
 
@@ -568,10 +622,6 @@ void main(void)
 
 
 
-  //initialize calibration voltage from flash
-  voltage_at_calibration = *calibration_voltage_flash_ptr;
-
-  printf("Loaded calibration voltage %4x\n",voltage_at_calibration);
 
   //Enter LPM4, Enable interrupts
   //  __bis_SR_register(LPM4_bits + GIE);
@@ -594,27 +644,33 @@ void main(void)
   timeouts[TASK_STOP_BREW]=TIMEOUT_MAX;
 
   i=0;
+  
+  
+  usart_start_reception(&cmd_usart);
+  //  usart_transmit_init(&cmd_usart,&usart_tx_index,&usart_tx_buffer);
+  hdlc_init_reception(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer);
   while(1) {
+    
+    /*
+      todo: add timing to prevent update in every iteration
+     */
+    
+    temperature = current_temperature(*calibration_temperature_flash_ptr,*calibration_voltage_flash_ptr,temperature_buffer,log_temperature_buffer_size);
 
     //logging task
-
-    if (timer_timeout(&timer,timeouts[TASK_STATUS_LOG])){
-      temperature_update(&voltage,temperature_buffer,log_temperature_buffer_size);
+    if(0){
+    // if (timer_timeout(&timer,timeouts[TASK_STATUS_LOG])){
       /* usart_printf("\rTemperature: %7u mK (%7i mC), Time: %10u ms", */
       /* 		   temperature*temperature_slope, */
       /* 		   temperature*temperature_slope-zero_degree_celsius_mk, */
       /* 		   time_out_value_ms-timer_current_time() */
       /* 		   ); */
 
-      temperature = (((uint32_t) calibration_temperature)*((uint32_t) voltage));
-      temperature/=voltage_at_calibration;
-      if(brewing) {
-	time = timeouts[TASK_STOP_BREW]-timer_current_time(&timer);
-      } else {
-	time =   (brewing_time_s * ((uint32_t) 1024));
-      }
-      usart_printf("\rTemperature: %3lu.%02lu K , Time: %7lu.%03lu s",
-      		   temperature/100,temperature%100,
+
+      time = remaining_time(timeouts);
+
+      usart_printf("\rTemperature: %3lu.%01lu K , Time: %7lu.%03lu s",
+      		   temperature/10,temperature%10,
 		   //		   (temperature-zero_degree_celsius_mk)/1000,
 		   // (temperature-zero_degree_celsius_mk)%1000,
    		   time/((uint32_t)1024),
@@ -631,7 +687,6 @@ void main(void)
     if(timer_timeout(&timer,timeouts[TASK_STOP_BREW])) {
       usart_printf("\nTimeout detected\n");
       timeouts[TASK_STOP_BREW]=TIMEOUT_MAX;
-      brewing = 0;
     }
 
 
@@ -640,28 +695,111 @@ void main(void)
     if(GPIO_INPUT_PIN_LOW == GPIO_getInputPinValue(
     		     temp_calibration_port,
     		     temp_calibration_pin)) {
-      temperature_update(&voltage,temperature_buffer,log_temperature_buffer_size);
-      voltage_at_calibration = voltage;
-      printf("\n Temperature calibration: %4x units\n",voltage_at_calibration);
-
-      printf("Program into flash...\n");
-      flash_update_word(calibration_voltage_flash_ptr,voltage_at_calibration);
-      printf("Read from flash: %4x\n",*calibration_voltage_flash_ptr);
     }
 
     if(GPIO_INPUT_PIN_LOW == GPIO_getInputPinValue(
     		     timer_start_port,
     		     timer_start_pin)) {
-      usart_printf("\nReset and start timer at button release.\n");
+      
       while (GPIO_INPUT_PIN_LOW == GPIO_getInputPinValue(
     		     timer_start_port,
     		     timer_start_pin));
-      timeouts[TASK_STOP_BREW]= (timer_current_time(&timer) + (brewing_time_s*((uint32_t) 1024)));
-      brewing = 1;
+      start_timeout(timeouts,brewing_time);
+    }
+    
+    switch (hdlc_update_rx_buffer(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer)) {
+    case HDLC_STATUS_FRAME_COMPLETE:
+
+      printf("\n<-: ");
+      for(i=0;i<hdlc_buffer.fill;i++) {
+	printf("%02x ",hdlc_buffer.data[i]);
+      }
+      printf("\n");
+      
+      cmd_error=cmd_dispatcher(&cmd_buffer);
+      switch(cmd_error) {
+      case CMD_ERROR_OK:
+	switch(cmd_buffer.data[0]) {
+	case CMD_COMMAND_ECHO:
+	  cmd_error = cmd_command_echo(&cmd_buffer,&cmd_buffer);
+	  break;
+	case CMD_COMMAND_CALIBRATE:
+	  cmd_error = cmd_command_calibrate(&cmd_buffer,&calibration_temperature,&cmd_buffer);
+	  if (CMD_ERROR_OK == cmd_error) {
+	    /*
+	      TODO: capsulate into function
+	    */
+	    temperature_update(&voltage,temperature_buffer,log_temperature_buffer_size);
+	    printf("\n Temperature calibration: %4x units\n",voltage);
+	  
+	    printf("Program into flash...\n");
+	    nv_update_word(calibration_voltage_flash_ptr,voltage);
+	    nv_update_word(calibration_temperature_flash_ptr,calibration_temperature);
+	    printf("Read from flash: %4x @ %i K\n",*calibration_voltage_flash_ptr,*calibration_temperature_flash_ptr);
+	  }
+	  break;
+	case CMD_COMMAND_START_TIMEOUT:
+	  /*
+	    read brewing time from command buffer and format response
+	   */
+	  cmd_error = cmd_command_start_timeout(&cmd_buffer,&cmd_buffer,&brewing_time,&target_temperature);
+	  
+	  if (CMD_ERROR_OK == cmd_error) {
+	    /*
+	      start timeout
+	     */
+	    printf("Start timer. Timeout: %i s, Target temperature %3i.%i\n",brewing_time,target_temperature/10,target_temperature%10);
+	    start_timeout(timeouts,brewing_time);
+	  }
+	  break;
+	case  CMD_COMMAND_GET_STATUS:
+	  /*
+	    return status of the device 
+	   */
+	  cmd_error = cmd_command_get_status(&cmd_buffer,&cmd_buffer,brewing_time,remaining_time(timeouts),target_temperature,temperature,0);
+	  printf("Return status\n");
+	  break;
+	default:
+	  cmd_error = cmd_format_error_message(&cmd_buffer,CMD_ERROR_UNKNOWN_COMMAND);
+	  break;
+	}
+
+	printf("\n->: ");
+	for(i=0;i<cmd_buffer.fill;i++) {
+	  printf("%02x ",cmd_buffer.data[i]);
+	}
+	printf("\n");
+
+	  
+	hdlc_transmit_frame(&cmd_usart,&cmd_buffer);
+	break;
+
+	/*
+	  silence for all remaining errors
+	 */
+      default:
+	break;
+      }
+
+
+
+      //      usart_init_reception(&cmd_usart,&hdlc_buffer);
+      hdlc_init_reception(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer);
+      break;
+
+    case HDLC_STATUS_BUFFER_OVERFLOW_ERROR:
+      printf("\nCommand buffer overflow\n");
+      hdlc_init_reception(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer);
+      break;
+
+    case HDLC_STATUS_LISTEN:
+      break;
+
+    default:
+      hdlc_init_reception(&hdlc_buffer,&hdlc_read_index, &usart_rx_buffer);
+      break;
     }
 
-
-    i++;
   }
   
   
@@ -704,13 +842,44 @@ void ADC12ISR(void)
 
 
 #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
-#pragma vector=TIMERB0_VECTOR
+#pragma vector=TIMERB1_VECTOR
 __interrupt
 #elif defined(__GNUC__)
 __attribute__((interrupt(TIMERB1_VECTOR)))
 #endif
-void TIMERB0_ISR(void)
+void TIMERB1_ISR(void)
 {
   timer_isr(&timer);
 }
 
+
+#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
+#pragma vector=USCI_A1_VECTOR
+__interrupt
+#elif defined(__GNUC__)
+__attribute__((interrupt(USCI_A1_VECTOR)))
+#endif
+void USCI_A1_ISR(void)
+{
+  /*
+    read to UCA1IV resets interrupt flag
+  */
+
+        switch (UCA1IV) {
+	  //Vector 2 - RXIFG
+        case 2:
+	  usart_rx_interrupt_handler(&cmd_usart,&usart_rx_buffer);
+	  break;
+	case 4:
+	  //TXIFG
+	  //	  usart_tx_interrupt_handler(&cmd_usart,&usart_tx_index,&usart_tx_buffer);
+	  break;
+	case 6:
+	  //TTIFG
+	  break;
+	case 8:
+	  //TXCPTIFG
+	  break;
+        default: break;
+        }
+}
