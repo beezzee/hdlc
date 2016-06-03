@@ -9,7 +9,6 @@
 #ifndef _hdlc_h
 #define _hdlc_h
 
-#include "usart.h"
 #include "buffer.h"
 
 #define HDLC_FRAME_BOUNDARY_OCTET 0x7e
@@ -29,8 +28,12 @@ typedef struct hdlc_frame {
 #define HDLC_STATUS_FRAME_COMPLETE 1 << 1
 #define HDLC_STATUS_LISTEN 0
 
-int hdlc_update_rx_buffer(buffer_t *hdlc_buffer, int *read_index, volatile const buffer_t *in_buffer);
-void hdlc_init_reception(buffer_t *hdlc_buffer,int *read_index,  buffer_t volatile const *in_buffer);
+
+extern char hdlc_getchar();
+extern void hdlc_putchar();
+
+int hdlc_receive_frame(buffer_t *hdlc_buffer);
+void hdlc_init_reception(buffer_t *hdlc_buffer);
 
 /**
    Formats and transmit HDLC frame.
