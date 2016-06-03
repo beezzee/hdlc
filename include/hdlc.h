@@ -39,10 +39,10 @@ void hdlc_init_reception(buffer_t *hdlc_buffer);
    Formats and transmit HDLC frame.
 
    Takes the payload given by buffer and transmit its as a HDLC
-   frame. This includes escape octet stuffing and CRC. 
+   frame. This includes escape octet stuffing and CRC.
 
    Note that this function is blocking.
  */
-int hdlc_transmit_frame(usart_t *usart,const buffer_t *buffer);
+int hdlc_transmit_frame(const buffer_t *buffer);
 
 #endif //_hdlc_h

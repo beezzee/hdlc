@@ -1,8 +1,9 @@
 #ifndef _buffer_h
 #define _buffer_h
 
-#include <msp430.h>
+
 #include <stdlib.h>
+#include <inttypes.h>
 
 typedef struct buffer {
   uint16_t size;
@@ -11,7 +12,7 @@ typedef struct buffer {
 } buffer_t;
 
 /**
-   Appends one byte c to buffer. 
+   Appends one byte c to buffer.
 
    The function returns the number of appended bytes.  If the buffer
    is not full, the byte is appended, ie. the byte c is copied to

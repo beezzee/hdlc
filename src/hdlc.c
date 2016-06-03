@@ -2,13 +2,13 @@
 
 /*
   dummy implementation as long as CRC is not implemented
- */ 
+ */
 void hdlc_init_crc(void) {
   return;
 }
 /*
   dummy implementation as long as CRC is not implemented
- */ 
+ */
 int hdlc_crc_error(const buffer_t *buffer) {
   return 0;
 }
@@ -27,7 +27,7 @@ void hdlc_init_reception(buffer_t *hdlc_buffer) {
   //  *read_index = in_buffer->fill;
 }
 
-#define abs(X) (X > 0 ? X : -X) 
+#define abs(X) (X > 0 ? X : -X)
 
 int hdlc_receive_frame(buffer_t *hdlc_buffer) {
   uint8_t rx_data;
@@ -44,17 +44,17 @@ int hdlc_receive_frame(buffer_t *hdlc_buffer) {
       escape_active = 0;
     } else {
       switch (rx_data) {
-      
+
       case HDLC_FRAME_BOUNDARY_OCTET:
 	escape_active = 1;
 	/*
 	  rfc1662, 4.3:
 
-	  Frames which are too short (less than 4 octets 
-	  when using the 16-bit FCS), or which end with 
+	  Frames which are too short (less than 4 octets
+	  when using the 16-bit FCS), or which end with
 	  a Control Escape octet followed immediately
-	  by a closing Flag Sequence, or in which 
-	  octet-framing is violated (by transmitting a 
+	  by a closing Flag Sequence, or in which
+	  octet-framing is violated (by transmitting a
 	  "0" stop bit where a "1" bit is expected), are
 	  silently discarded, and not counted as a FCS error.
 	*/
@@ -76,11 +76,11 @@ int hdlc_receive_frame(buffer_t *hdlc_buffer) {
 	    hdlc_buffer->fill = hdlc_buffer->fill - 2;
 	    return HDLC_STATUS_FRAME_COMPLETE;
 	  }
-	} 
+	}
 	break;
       case HDLC_ESCAPE_OCTET:
 	/* if this byte is not frame boundary */
-  
+
 	/*
 	  if we have detected an escape, we need to wait for one more
 	  available byte to decide what to do
@@ -94,24 +94,24 @@ int hdlc_receive_frame(buffer_t *hdlc_buffer) {
     }
 
     if(!escape_active) {
-      hdlc_update_crc(rx_data);	    
+      hdlc_update_crc(rx_data);
       if(hdlc_buffer->fill < hdlc_buffer->size) {
 	hdlc_buffer->data[hdlc_buffer->fill++]=rx_data;
       }	else {
 	return HDLC_STATUS_BUFFER_OVERFLOW_ERROR;
       }
     }
-    
+
 
   }
 }
 
 
 
-int hdlc_transmit_frame(usart_t *usart,const buffer_t *buffer){
+int hdlc_transmit_frame(const buffer_t *buffer){
   int i;
   int crc=0;
-  
+
   /*
     assume that buffer contains already initialzed address and control
     data.
@@ -130,7 +130,7 @@ int hdlc_transmit_frame(usart_t *usart,const buffer_t *buffer){
     }
   }
 
-  
+
   /*
     currently, CRC is only dummy function. Endianess of CRC has to be
     checked.
