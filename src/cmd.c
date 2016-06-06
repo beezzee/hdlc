@@ -1,6 +1,6 @@
 #include "cmd.h"
 
-#include "msp_utils.h"
+#include "utils.h"
 
 int cmd_format_error_message(buffer_t *buffer, uint8_t error_message) {
   /*
@@ -36,11 +36,11 @@ int cmd_command_echo(buffer_t *rsp_buffer, const buffer_t *cmd_buffer) {
 
   /*
     if we use the same buffers, we don't need to copy.
-  */ 
+  */
   if(rsp_buffer == cmd_buffer) {
-    
+
   } else {
-  
+
     /*
       copy buffer
     */
@@ -51,12 +51,12 @@ int cmd_command_echo(buffer_t *rsp_buffer, const buffer_t *cmd_buffer) {
 			 );
 	}
   }
-  
+
   /*
     set status to ok
    */
   rsp_buffer->data[1] = CMD_ERROR_OK;
- 
+
   return rsp_buffer->data[1];
 }
 
@@ -74,7 +74,7 @@ int cmd_command_start_timeout(buffer_t *rsp_buffer, const buffer_t *cmd_buffer, 
 
   cmd_format_error_message(rsp_buffer,CMD_ERROR_OK);
   return CMD_ERROR_OK;
-  
+
 }
 
 int cmd_command_calibrate(buffer_t *rsp_buffer, uint16_t *temperature, const buffer_t *cmd_buffer) {
@@ -90,7 +90,7 @@ int cmd_command_calibrate(buffer_t *rsp_buffer, uint16_t *temperature, const buf
 
   cmd_format_error_message(rsp_buffer,CMD_ERROR_OK);
   return CMD_ERROR_OK;
-  
+
 }
 
 

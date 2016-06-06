@@ -2,6 +2,7 @@
 #define _cmd_h
 
 #include "usart.h"
+#include "buffer.h"
 
 #define CMD_COMMAND_ECHO 1
 #define CMD_COMMAND_CALIBRATE 2
@@ -43,13 +44,13 @@ int cmd_dispatcher(const buffer_t *cmd_buffer);
    @param timeout Will be set to brewing timeout.
    @param target_temperature Will be set to target brewing temperature.
    @param cmd_buffer Buffer for command.
-   @return Error code. 
+   @return Error code.
  */
 int cmd_command_start_timeout(buffer_t *rsp_buffer, const buffer_t *cmd_buffer, uint16_t *timeout, uint16_t *target_temperature);
 
 /**
    Used for parsing temperature calibration command.
-   
+
    ARG0: LSB of calibration temperature in Milli Kelvin.
    ARG1: MSB of calibration temperature in Milli Kelvin.
 

@@ -1,5 +1,5 @@
 import serial
-import imp
+#import imp
 
 
 
@@ -22,7 +22,7 @@ def from_little_endian(l):
     r = 0
     for d in reversed(l):
         assert int(d) < 256
-        r = r << 8 
+        r = r << 8
         r = r + int(d)
 
     return d
@@ -30,7 +30,7 @@ def from_little_endian(l):
 class HdlcException(Exception):
     def __init__(self,s):
         self.s = s
-        
+
     def __str__(self):
         return str(self.s)
 
@@ -46,7 +46,7 @@ class HdlcSlaveError(HdlcException):
 class Temperature(float):
     zero_degree_celcius = 271.150
     #temperature in milli Kelvin
-   
+
     def __str__(self):
         return "{0} K ({1} C)".format(float.__str__(self),self.to_celcius())
 
@@ -60,14 +60,14 @@ class Temperature(float):
 class Status:
 
     def __init__(self,d):
-        assert len(d) >= 2*5 
+        assert len(d) >= 2*5
 
         self.timeout = from_little_endian(d[0:2])
         self.currentTime = from_little_endian(d[2:4])
         self.targetTemperature = Temperature(from_little_endian(d[4:6])/10)
         self.currentTemperature = Temperature(from_little_endian(d[6:8])/10)
         self.position = from_little_endian(d[8:10])
-        
+
     def __str__(self):
         s = ""
         s += "Timeout: " + str(self.timeout) + " s\n"
@@ -91,11 +91,11 @@ class HdlcFrame(list):
 
     def __str__(self):
         return self.format()
-        
+
     def format(self,base=16):
         formated_frame = ""
         formated_frame += "addr:{0:02x} ".format(self.address)
-        formated_frame += "ctrl:{0:02x} ".format(self.control)       
+        formated_frame += "ctrl:{0:02x} ".format(self.control)
         formated_frame += "data:"
         for i in self:
             formated_frame += "{0:02x} ".format(i)
@@ -134,9 +134,9 @@ class HdlcFrame(list):
             if frame[i] == hdlc_escape and i+1 < len(frame):
                 data.append(frame[i+1] ^ 0x20)
                 i+=1
-            else: 
+            else:
                 data.append(frame[i])
-           
+
             i+=1
 
         if len(data) < 4:
@@ -148,15 +148,15 @@ class HdlcFrame(list):
 
         if status_ok != data[1]:
             raise HdlcSlaveError(data[1])
-            
+
         return cls(data[2:-2],data[0],data[1])
-    
 
 
-def transmit_payload(port,data,address=hdlc_address,control=hdlc_control): 
-    
+
+def transmit_payload(port,data,address=hdlc_address,control=hdlc_control):
+
     command = HdlcFrame(data,address,control)
-    
+
     print ("<- " + str(command) + "( " + str(command.encode()) + " )")
 
     port.write(bytearray(command.encode()))
@@ -168,10 +168,10 @@ def read_frame(port,timeout=None):
     l = list(data)
     return l
 
-        
 
-def open_port(port="/dev/ttyACM1"):
-    return serial.Serial(port,baudrate=115200,timeout=3)
+
+def open_port(port="/dev/ttyACM1",baudrate=115200):
+    return serial.Serial(port,baudrate,timeout=3)
 
 def read_port(port,timeout=None):
     port.timeout=timeout
@@ -201,14 +201,14 @@ def exchange(port,data,address=hdlc_address,control=hdlc_control,timeout=None,re
 def start_timeout(port,time=0,temperature=Temperature.from_celcius(80),timeout=None,trials=10):
     print("Start brewing at {0} and  timeout of {1} s".format(temperature,time))
     request = [time & 0xFF, 0xFF & (time >> 8), round(temperature*10) & 0xFF, round(temperature*10) >> 8 ]
-    try: 
+    try:
         response = exchange(port,request,cmd_timeout,0,timeout,trials)
     except HdlcException:
         print("Starting timeout failed")
     else:
         print("Timeout started")
 
-    
+
 
 def calibrate(port,temperature=Temperature.from_celcius(80),timeout=None,trials=10):
     print("Calibrate at " + str(temperature))
