@@ -139,4 +139,5 @@ int hdlc_transmit_frame(const buffer_t *buffer){
   hdlc_putchar(crc >> 8);
 
   hdlc_putchar(HDLC_FRAME_BOUNDARY_OCTET);
+  return HDLC_STATUS_FRAME_COMPLETE;
 }

@@ -30,7 +30,7 @@ typedef struct hdlc_frame {
 
 
 extern char hdlc_getchar();
-extern void hdlc_putchar();
+extern void hdlc_putchar(char c);
 
 int hdlc_receive_frame(buffer_t *hdlc_buffer);
 void hdlc_init_reception(buffer_t *hdlc_buffer);
