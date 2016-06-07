@@ -1,7 +1,0 @@
-Reed contacts
-
-
-#old orders:
-
-H-bridge (including diodes)
-Voltage regulator (including capcities)
