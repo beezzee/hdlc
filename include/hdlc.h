@@ -28,6 +28,16 @@ typedef struct hdlc_frame {
 #define HDLC_STATUS_FRAME_COMPLETE 1 << 1
 #define HDLC_STATUS_LISTEN 0
 
+/**
+    Byte offset of HDLC Address field.
+    */
+#define HDLC_ADDR_OFFSET 0
+
+/**
+    Byte offset of HDLC Control field
+*/
+#define HDLC_CTRL_OFFSET 1
+
 
 extern char hdlc_getchar();
 extern void hdlc_putchar(char c);
