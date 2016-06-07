@@ -9,9 +9,7 @@ hdlc_flag = 0x7e
 hdlc_address = 0xff
 hdlc_control = 0x03
 cmd_echo = 1
-cmd_calibrate = 2
-cmd_timeout = 3
-cmd_status = 4
+
 
 status_ok = 0
 status_invalid_response = 1
@@ -43,45 +41,6 @@ class HdlcCrcError(HdlcException):
 class HdlcSlaveError(HdlcException):
     pass
 
-class Temperature(float):
-    zero_degree_celcius = 271.150
-    #temperature in milli Kelvin
-
-    def __str__(self):
-        return "{0} K ({1} C)".format(float.__str__(self),self.to_celcius())
-
-    def to_celcius(self):
-        return self-Temperature.zero_degree_celcius
-
-    @classmethod
-    def from_celcius(cls,t):
-        return cls(t+Temperature.zero_degree_celcius)
-
-class Status:
-
-    def __init__(self,d):
-        assert len(d) >= 2*5
-
-        self.timeout = from_little_endian(d[0:2])
-        self.currentTime = from_little_endian(d[2:4])
-        self.targetTemperature = Temperature(from_little_endian(d[4:6])/10)
-        self.currentTemperature = Temperature(from_little_endian(d[6:8])/10)
-        self.position = from_little_endian(d[8:10])
-
-    def __str__(self):
-        s = ""
-        s += "Timeout: " + str(self.timeout) + " s\n"
-        if self.currentTime == 0:
-            s += "Timer: stopped\n"
-        else:
-            s += "Timer: running, " + str(self.currentTime) + " s from timeout\n"
-
-        s += "Temperature: " + str(self.currentTemperature) + "\n"
-
-        s += "Brewing temperature: " + str(self.targetTemperature) + "\n"
-
-        s += "Position: " + str(self.position) + " mm\n"
-        return s
 
 class HdlcFrame(list):
     def __init__(self, payload=[],address=hdlc_address,control=hdlc_control):
@@ -198,28 +157,6 @@ def exchange(port,data,address=hdlc_address,control=hdlc_control,timeout=None,re
             return frame
 
 
-def start_timeout(port,time=0,temperature=Temperature.from_celcius(80),timeout=None,trials=10):
-    print("Start brewing at {0} and  timeout of {1} s".format(temperature,time))
-    request = [time & 0xFF, 0xFF & (time >> 8), round(temperature*10) & 0xFF, round(temperature*10) >> 8 ]
-    try:
-        response = exchange(port,request,cmd_timeout,0,timeout,trials)
-    except HdlcException:
-        print("Starting timeout failed")
-    else:
-        print("Timeout started")
-
-
-
-def calibrate(port,temperature=Temperature.from_celcius(80),timeout=None,trials=10):
-    print("Calibrate at " + str(temperature))
-    request = [round(temperature*10) & 0xFF, round(temperature*10) >> 8]
-    try:
-        response = exchange(port,request,cmd_calibrate,0,timeout,trials)
-    except HdlcException:
-        print("Calibration failed")
-    else:
-        print("Calibration successful")
-
 
 def echo(port,payload,timeout=None,trials=10):
     try:
@@ -231,11 +168,4 @@ def echo(port,payload,timeout=None,trials=10):
 
 
 
-def get_status(port,timeout=None,trials=10):
-    try:
-        response = exchange(port,[],cmd_status,0,timeout,trials)
-    except HdlcException:
-        print("Status fetch failed")
-    else:
-        status = Status(response)
-        print("Status \n" + str(status))
+
