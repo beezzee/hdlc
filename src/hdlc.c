@@ -31,10 +31,14 @@ void hdlc_init_reception(buffer_t *hdlc_buffer) {
 
 int hdlc_receive_frame(buffer_t *hdlc_buffer) {
   uint8_t rx_data;
-  uint8_t escape_active;
+  uint8_t escape_active, new_data;
 
 
+  hdlc_init_reception(hdlc_buffer);
   escape_active = 0;
+  new_data=0;
+
+
   while(1) {
 
     rx_data = hdlc_getchar();
@@ -42,11 +46,13 @@ int hdlc_receive_frame(buffer_t *hdlc_buffer) {
     if(escape_active) {
       rx_data ^= 0x20;
       escape_active = 0;
+      new_data=1;
     } else {
       switch (rx_data) {
 
       case HDLC_FRAME_BOUNDARY_OCTET:
-	escape_active = 1;
+	escape_active = 0;
+	new_data=0;
 	/*
 	  rfc1662, 4.3:
 
@@ -77,6 +83,8 @@ int hdlc_receive_frame(buffer_t *hdlc_buffer) {
 	    return HDLC_STATUS_FRAME_COMPLETE;
 	  }
 	}
+
+
 	break;
       case HDLC_ESCAPE_OCTET:
 	/* if this byte is not frame boundary */
@@ -86,19 +94,22 @@ int hdlc_receive_frame(buffer_t *hdlc_buffer) {
 	  available byte to decide what to do
 	*/
 	escape_active = 1;
+	new_data = 0;
 	break;
-      default:
-	escape_active =0;
-	break;
+    default:
+        escape_active = 0;
+        new_data=1;
+
+        break;
       }
     }
 
-    if(!escape_active) {
+    if(new_data) {
       hdlc_update_crc(rx_data);
       if(hdlc_buffer->fill < hdlc_buffer->size) {
-	hdlc_buffer->data[hdlc_buffer->fill++]=rx_data;
+        hdlc_buffer->data[hdlc_buffer->fill++]=rx_data;
       }	else {
-	return HDLC_STATUS_BUFFER_OVERFLOW_ERROR;
+        return HDLC_STATUS_BUFFER_OVERFLOW_ERROR;
       }
     }
 
