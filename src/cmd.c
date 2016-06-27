@@ -8,6 +8,13 @@
 
 static cmd_handler_t registered_commands[256];
 
+void cmd_init() {
+    int i;
+    for (i=0;i<256;i++) {
+        registered_commands[i] = NULL;
+    }
+}
+
 int cmd_register(uint8_t id, cmd_handler_t handler) {
     registered_commands[id] = handler;
     return 0;
@@ -73,8 +80,13 @@ int cmd_command_echo(buffer_t *rsp_buffer, const buffer_t *cmd_buffer) {
 
 
 int cmd_dispatcher(buffer_t *rsp_buffer, const buffer_t *cmd_buffer) {
-  if (cmd_buffer->fill < 2) {
+  if (rsp_buffer->size < 2) {
     return CMD_ERROR_ARGUMENT;
+  }
+
+  if (NULL==registered_commands[cmd_buffer->data[HDLC_ADDR_OFFSET]]) {
+    cmd_format_error_message(rsp_buffer,CMD_ERROR_UNKNOWN_COMMAND);
+    return CMD_ERROR_UNKNOWN_COMMAND;
   }
 
   //cmd_command_echo(rsp_buffer,cmd_buffer);
