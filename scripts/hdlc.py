@@ -8,7 +8,7 @@ hdlc_escape = 0x7d
 hdlc_flag = 0x7e
 hdlc_address = 0xff
 hdlc_control = 0x03
-cmd_echo = 1
+cmd_echo = 0
 
 
 status_ok = 0
@@ -159,12 +159,8 @@ def exchange(port,data,address=hdlc_address,control=hdlc_control,timeout=None,re
 
 
 def echo(port,payload,timeout=None,trials=10):
-    try:
-        response = exchange(port,payload,cmd_echo,0,timeout,trials)
-    except HdlcException:
-        print("Exchange failed")
-    else:
-        print("Exchange Successful")
+    response = exchange(port,payload,cmd_echo,0,timeout,trials)
+    return response
 
 
 
