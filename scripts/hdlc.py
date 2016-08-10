@@ -1,4 +1,5 @@
 import serial
+import logging
 #import imp
 
 
@@ -15,6 +16,10 @@ status_ok = 0
 status_invalid_response = 1
 status_crc_at_master = 1
 status_crc_at_slave = 1<<4
+
+
+logger = logging.getLogger(__name__)
+
 
 def from_little_endian(l):
     r = 0
@@ -119,7 +124,7 @@ def transmit_payload(port,data,address=hdlc_address,control=hdlc_control):
 
     command = HdlcFrame(data,address,control)
 
-    print ("<- " + str(command) + "( " + str(command.encode()) + " )")
+    logger.debug("<- " + str(command) + "( " + str(command.encode()) + " )")
 
     port.write(bytearray(command.encode()))
 
@@ -138,7 +143,7 @@ def open_port(port="/dev/ttyACM1",baudrate=115200):
 def read_port(port,timeout=None):
     port.timeout=timeout
     data = port.read()
-    print (data)
+    logger.debug(data)
 
 def exchange(port,data,address=hdlc_address,control=hdlc_control,timeout=None,retry=0):
 
@@ -151,12 +156,12 @@ def exchange(port,data,address=hdlc_address,control=hdlc_control,timeout=None,re
             frame = HdlcFrame.decode(raw)
         except HdlcException as e:
             trial+=1
-            print ("exch " + str(trial) + " -> " + str(raw) + " invalid")
+            logger.info("exch " + str(trial) + " -> " + str(raw) + " invalid")
             if trial == retry:
-                print("give up")
+                logger.warn("give up data exchange")
                 raise e
         else:
-            print ("-> ( " + str(raw) + " ) " + str(frame))
+            logger.debug("-> ( " + str(raw) + " ) " + str(frame))
             return frame
 
 
