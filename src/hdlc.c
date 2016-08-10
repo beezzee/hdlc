@@ -152,3 +152,23 @@ int hdlc_transmit_frame(const buffer_t *buffer){
   hdlc_putchar(HDLC_FRAME_BOUNDARY_OCTET);
   return HDLC_STATUS_FRAME_COMPLETE;
 }
+
+buffer_t hdlc_get_payload(const buffer_t *buffer) {
+    buffer_t tmp;
+
+    /*  address, control, 2x CRC*/
+    if(buffer->fill + buffer->size < 8) {
+        tmp.fill = 0;
+        tmp.size = buffer->size;
+        tmp.data = buffer->data;
+    } else {
+        /*cut off 4 bytes address, control at beginning and  2x CRC at end*/
+        tmp.fill = buffer->fill-4;
+
+        /*cut off beginning of buffer*/
+        tmp.size = buffer->size-2;
+        tmp.data = buffer->data+2;
+    }
+
+    return tmp;
+}

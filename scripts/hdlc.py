@@ -8,7 +8,7 @@ hdlc_escape = 0x7d
 hdlc_flag = 0x7e
 hdlc_address = 0xff
 hdlc_control = 0x03
-cmd_echo = 1
+cmd_echo = 0
 
 
 status_ok = 0
@@ -30,16 +30,19 @@ class HdlcException(Exception):
         self.s = s
 
     def __str__(self):
-        return str(self.s)
+        return self.s
 
 class HdlcFrameError(HdlcException):
-    pass
+    def __str__(self):
+        return "HDLC frame error: " + self.s
 
 class HdlcCrcError(HdlcException):
-    pass
+    def __str__(self):
+        return "HDLC CRC error: " + self.s
 
-class HdlcSlaveError(HdlcException):
-    pass
+class HdlcStatusError(HdlcException):
+    def __str__(self):
+        return "HDLC error, slave returned status " + self.s
 
 
 class HdlcFrame(list):
@@ -99,14 +102,14 @@ class HdlcFrame(list):
             i+=1
 
         if len(data) < 4:
-            raise HdlcFrameError(len(data))
+            raise HdlcFrameError("frame shorter than 4 bytes")
 
     #dummy CRC check
         if data[-2] != 0 or data[-1] != 0:
-            raise HdlcCrcError(0)
+            raise HdlcCrcError(str(data[-2:-1]))
 
         if status_ok != data[1]:
-            raise HdlcSlaveError(data[1])
+            raise HdlcStatusError(str(data[1]))
 
         return cls(data[2:-2],data[0],data[1])
 
@@ -159,12 +162,8 @@ def exchange(port,data,address=hdlc_address,control=hdlc_control,timeout=None,re
 
 
 def echo(port,payload,timeout=None,trials=10):
-    try:
-        response = exchange(port,payload,cmd_echo,0,timeout,trials)
-    except HdlcException:
-        print("Exchange failed")
-    else:
-        print("Exchange Successful")
+    response = exchange(port,payload,cmd_echo,0,timeout,trials)
+    return response
 
 
 

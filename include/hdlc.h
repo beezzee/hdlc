@@ -55,4 +55,6 @@ void hdlc_init_reception(buffer_t *hdlc_buffer);
  */
 int hdlc_transmit_frame(const buffer_t *buffer);
 
+buffer_t hdlc_get_payload(const buffer_t *buffer);
+
 #endif //_hdlc_h
