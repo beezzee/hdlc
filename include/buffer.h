@@ -26,6 +26,9 @@ int buffer_append_byte(buffer_t * buffer, uint8_t c);
 
 int buffer_copy(buffer_t * dst,const buffer_t *src);
 
+
+void buffer_print(const buffer_t *buffer);
+
 uint8_t buffer_at_index(const buffer_t *buffer, const uint16_t index);
 
 #endif // _buffer_h

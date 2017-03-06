@@ -22,8 +22,10 @@ typedef struct hdlc_frame {
   uint8_t status;
 } hdlc_frame_t;
 
-#define HDLC_STATUS_CRC_ERROR 1 << 4
-#define HDLC_STATUS_BUFFER_OVERFLOW_ERROR 1<<5
+#define HDLC_STATUS_CRC_ERROR (1 << 4)
+#define HDLC_STATUS_BUFFER_OVERFLOW_ERROR (1<<5)
+
+#define HDLC_STATUS_ERROR (HDLC_STATUS_CRC_ERROR | HDLC_STATUS_BUFFER_OVERFLOW_ERROR)
 
 #define HDLC_STATUS_FRAME_COMPLETE 1 << 1
 #define HDLC_STATUS_LISTEN 0
@@ -37,6 +39,11 @@ typedef struct hdlc_frame {
     Byte offset of HDLC Control field
 */
 #define HDLC_CTRL_OFFSET 1
+
+/**
+    Byte offset of HDLC Data field
+*/
+#define HDLC_DATA_OFFSET 2
 
 
 extern char hdlc_getchar();

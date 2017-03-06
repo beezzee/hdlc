@@ -13,6 +13,15 @@ uint8_t buffer_at_index(const buffer_t *buffer, const uint16_t index) {
   return buffer->data[index];
 }
 
+void buffer_print(const buffer_t *buffer) {
+    int i;
+    printf("[");
+    for(i=0;i<buffer->fill;i++) {
+        printf("0x%02x ",buffer->data[i]);
+    }
+    printf("]");
+}
+
 int buffer_copy(buffer_t * dst,const buffer_t *src) {
     unsigned int i;
 
