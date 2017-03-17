@@ -89,12 +89,9 @@ class HdlcFrame(list):
         data = list()
         i = 0
 
-    #forward to start sequence
-        while i<len(frame) and frame[i] !=  hdlc_flag:
-            i+=1
-
     #remove start sequence
-        i+=1
+        while i<len(frame) and frame[i] ==  hdlc_flag:
+            i+=1
 
     #transform escaped bytes
         while i<len(frame) and frame[i] !=  hdlc_flag:
@@ -129,11 +126,39 @@ def transmit_payload(port,data,address=hdlc_address,control=hdlc_control):
     port.write(bytearray(command.encode()))
 
 
-def read_frame(port,timeout=None):
-    port.timeout = timeout
-    data = port.read(512)
-    l = list(data)
-    return l
+def read_frame(port,timeout=0):
+    port.timeout = 1
+
+    data = []
+
+    timer=0
+    while True:
+        #read until next EOF flag, maximum of 512 bytes, or timeout
+
+        #read one byte at a time to immediately abort at EOF
+        chunk = port.read(1)
+        timer+=1
+
+        #no timeout:
+        if len(chunk) > 0:
+            #restart timeout
+            timer=0
+            data += list(chunk)
+
+        if timer>=timeout:
+            logger.debug("Timeout while waiting for data.")
+            break
+
+        if len(data) > 1 and data[-1] == hdlc_flag:
+            logger.debug("Interpret HDLC boundary flag as EOF")
+            break
+
+        if len(data)>=256:
+            logger.debug("Reached maximum frame size")
+            break
+
+    logger.debug("-> " + str(data))
+    return data
 
 
 
@@ -149,19 +174,21 @@ def exchange(port,data,address=hdlc_address,control=hdlc_control,timeout=None,re
 
     trial=0
     while True:
-
         transmit_payload(port,data,address,control)
-        raw = read_frame(port,timeout)
+        data = read_frame(port,timeout)
+
+        logger.debug("Try to decode frame")
+        
         try:
-            frame = HdlcFrame.decode(raw)
+            frame = HdlcFrame.decode(data)
         except HdlcException as e:
+            logger.info("Trial " + str(trial) + ": invalid response")
             trial+=1
-            logger.info("exch " + str(trial) + " -> " + str(raw) + " invalid")
             if trial == retry:
                 logger.warn("give up data exchange")
                 raise e
         else:
-            logger.debug("-> ( " + str(raw) + " ) " + str(frame))
+            logger.debug(str(frame) + " (" + str(data) + ")")
             return frame
 
 
