@@ -21,7 +21,6 @@ typedef struct buffer {
    appended.
 
   */
-
 int buffer_append_byte(buffer_t * buffer, uint8_t c);
 
 int buffer_copy(buffer_t * dst,const buffer_t *src);

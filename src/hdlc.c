@@ -157,13 +157,18 @@ buffer_t hdlc_get_payload(const buffer_t *buffer) {
     buffer_t tmp;
 
     /*  address, control, 2x CRC*/
-    if(buffer->fill + buffer->size < 8) {
+    if(buffer->fill < 2) {
         tmp.fill = 0;
         tmp.size = buffer->size;
         tmp.data = buffer->data;
     } else {
+        /*cut off bytes address, control at beginning */
+        tmp.fill = buffer->fill-2;
+
         /*cut off 4 bytes address, control at beginning and  2x CRC at end*/
-        tmp.fill = buffer->fill-4;
+        //do not cut off CRC because it is already cut off by hdlc_receive_frame
+        //tmp.fill = buffer->fill-4;
+
 
         /*cut off beginning of buffer*/
         tmp.size = buffer->size-2;

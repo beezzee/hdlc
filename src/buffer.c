@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "buffer.h"
 
 int buffer_append_byte(buffer_t * buffer, uint8_t c) {

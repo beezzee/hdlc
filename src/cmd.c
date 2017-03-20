@@ -91,6 +91,8 @@ int cmd_dispatcher(buffer_t *rsp_buffer, const buffer_t *cmd_buffer) {
 
   //cmd_command_echo(rsp_buffer,cmd_buffer);
   //return 0;
+  /*for response, use same address as request*/
+  rsp_buffer->data[HDLC_ADDR_OFFSET] = cmd_buffer->data[HDLC_ADDR_OFFSET];
   return (registered_commands[cmd_buffer->data[HDLC_ADDR_OFFSET]])(rsp_buffer,cmd_buffer);
     //return (registered_commands[1])(rsp_buffer,cmd_buffer);
 }
